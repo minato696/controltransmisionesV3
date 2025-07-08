@@ -1,25 +1,17 @@
-// src/components/transmisiones/types.ts
+// Importar los tipos básicos desde la app
+import { Filial as FilialBase } from '@/app/types/filial';
+import { Programa as ProgramaBase } from '@/app/types/programa';
 
-export interface Programa {
-  id: number;
-  nombre: string;
+// Extender los tipos para transmisiones
+export interface Programa extends ProgramaBase {
   horario: string;
-  horaInicio?: string;
   diasSemana: string[];
   isActivo: boolean;
-  filialesIds?: number[];
-  createdAt?: string;
-  updatedAt?: string;
 }
 
-export interface Filial {
-  id: number;
-  nombre: string;
+export interface Filial extends FilialBase {
   isActivo: boolean;
   programaIds?: number[];
-  programas?: Programa[];
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface Reporte {

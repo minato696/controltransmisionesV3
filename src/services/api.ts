@@ -1,12 +1,7 @@
 // src/services/api.ts
 import axios from 'axios';
-// @ts-ignore - Temporal mientras se crea el archivo
-import { 
-  convertAbbrToBackendTarget, 
-  convertBackendTargetToAbbr,
-  processReportTarget,
-  isValidTargetAbbr
-} from '../utils/targetMapping';
+import { Filial, FilialInput } from '../app/types/filial';
+import { Programa, ProgramaInput } from '../app/types/programa';
 
 // Configuración base
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.213:5886';
@@ -109,9 +104,14 @@ export const transformarFiliales = (filialesBackend: FilialBackend[]) => {
   return filialesBackend.map(filial => ({
     id: filial.id,
     nombre: filial.nombre.toUpperCase(),
+    activa: filial.isActivo,
+    // Campos opcionales con valores por defecto
+    descripcion: '',
+    ubicacion: '',
+    fechaCreacion: filial.createdAt || new Date().toISOString(),
+    // Propiedades para el sistema de transmisiones
     isActivo: filial.isActivo,
     programaIds: filial.programaIds || [],
-    // Transformar programas si vienen incluidos
     programas: filial.programas ? transformarProgramas(filial.programas) : [],
     createdAt: filial.createdAt,
     updatedAt: filial.updateAt
@@ -153,6 +153,30 @@ export const transformarReportes = (reportesBackend: ReporteBackend[]) => {
       updateAt: reporte.updateAt
     };
   });
+};
+
+// ==================== FUNCIONES PARA ADAPTAR LOS DATOS AL BACKEND ====================
+
+// Función corregida para preparar los datos de filial para el backend
+export const transformarProgramaParaBackend = (programa: ProgramaInput): ProgramaBackend => {
+  return {
+    id: 0, // El ID será asignado por el backend en la creación
+    nombre: programa.nombre,
+    descripcion: programa.descripcion,
+    horaInicio: programa.fechaInicio ? new Date(programa.fechaInicio).toTimeString().slice(0, 5) : '08:00',
+    isActivo: programa.estado === 'activo',
+    diasSemana: programa.diasSemana || ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES']
+  } as ProgramaBackend;
+};
+
+// Función corregida para preparar los datos de filial para el backend
+// Solo incluye los campos que el backend espera
+export const transformarFilialParaBackend = (filial: FilialInput): FilialBackend => {
+  return {
+    id: 0, // El ID será asignado por el backend en la creación
+    nombre: filial.nombre,
+    isActivo: filial.activa
+  } as FilialBackend;
 };
 
 // ==================== ENDPOINTS ====================
@@ -293,4 +317,55 @@ export const getReportesPorFechas = async (fechaInicio: string, fechaFin: string
   return reportesTransformados.filter(reporte => {
     return reporte.fecha >= fechaInicio && reporte.fecha <= fechaFin;
   });
+};
+
+// ==================== FUNCIONES DE UTILIDAD PARA TARGET ====================
+
+// Mapeo de abreviaturas (frontend) a valores completos (backend)
+const TARGET_MAPPINGS: Record<string, string> = {
+  // Frontend -> Backend
+  'Fta': 'Falta',
+  'Enf': 'Enfermedad',
+  'P.Tec': 'Problema técnico',
+  'F.Serv': 'Falla de servicios',
+  'Tde': 'Tarde',
+  'Otros': 'Otro' // Nota: Frontend usa "Otros", backend usa "Otro"
+};
+
+// Mapeo inverso (backend -> frontend)
+const TARGET_MAPPINGS_INVERSE: Record<string, string> = {
+  'Falta': 'Fta',
+  'Enfermedad': 'Enf',
+  'Problema técnico': 'P.Tec',
+  'Falla de servicios': 'F.Serv',
+  'Tarde': 'Tde',
+  'Otro': 'Otros' // Nota: Backend usa "Otro", frontend usa "Otros"
+};
+
+/**
+ * Convierte una abreviatura del frontend al valor completo del backend
+ */
+export const convertAbbrToBackendTarget = (abbr: string | null): string | null => {
+  if (!abbr) return null;
+  
+  // Si es "Otros" o "Otro", siempre devolver "Otro" (backend)
+  if (abbr === 'Otros' || abbr === 'Otro') {
+    return 'Otro';
+  }
+  
+  return TARGET_MAPPINGS[abbr] || abbr;
+};
+
+/**
+ * Convierte un valor completo del backend a la abreviatura del frontend
+ */
+export const convertBackendTargetToAbbr = (backendTarget: string | null): string | null => {
+  if (!backendTarget) return null;
+  
+  // Si es "Otro" (backend), devolver "Otros" (frontend)
+  if (backendTarget === 'Otro') {
+    return 'Otros';
+  }
+  
+  return TARGET_MAPPINGS_INVERSE[backendTarget] || backendTarget;
 };

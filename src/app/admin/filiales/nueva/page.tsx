@@ -2,7 +2,7 @@
 
 import { createFilial } from '@/app/api/filiales';
 import { FilialInput } from '@/app/types/filial';
-import FilialForm from '../components/FilialForm';  // Asegúrate de que sea FilialForm
+import FilialForm from '../components/FilialForm';
 
 export default function NuevaFilialPage() {
   const handleCreateFilial = async (filial: FilialInput) => {

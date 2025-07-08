@@ -24,7 +24,7 @@ import {
   guardarOActualizarReporte,
   convertirFechaASwagger,
   convertirFechaDesdeSwagger
-} from '../../services/api';
+} from '../../services/api-adapter';
 
 export default function ControlTransmisiones() {
   // Estados principales
@@ -57,7 +57,18 @@ export default function ControlTransmisiones() {
   // Actualizar días de la semana
   useEffect(() => {
     const fechasSemana = obtenerFechasSemana();
-    setDiasSemana(fechasSemana);
+    // Convertir fechas al formato YYYY-MM-DD
+    const fechasFormateadas = fechasSemana.map(dia => {
+      if (dia.fecha.includes('/')) {
+        const [dd, mm, yyyy] = dia.fecha.split('/');
+        return {
+          ...dia,
+          fecha: `${yyyy}-${mm}-${dd}`
+        };
+      }
+      return dia;
+    });
+    setDiasSemana(fechasFormateadas);
   }, []);
 
   // Cargar reportes cuando cambie la selección
@@ -78,14 +89,27 @@ export default function ControlTransmisiones() {
         getProgramasTransformados()
       ]);
       
-      setFiliales(filialesData.filter((f: Filial) => f.isActivo));
-      setProgramas(programasData.filter((p: Programa) => p.isActivo));
+      // Asegurarse de que los datos tengan el formato correcto
+      const filialesConvertidas: Filial[] = filialesData.map(f => ({
+        ...f,
+        isActivo: f.isActivo ?? f.activa
+      }));
+      
+      const programasConvertidos: Programa[] = programasData.map(p => ({
+        ...p,
+        horario: p.horario || p.horaInicio || '00:00',
+        diasSemana: p.diasSemana || ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES'],
+        isActivo: p.isActivo ?? (p.estado === 'activo')
+      }));
+      
+      setFiliales(filialesConvertidas.filter(f => f.isActivo));
+      setProgramas(programasConvertidos.filter(p => p.isActivo));
       
       // Seleccionar primera filial si existe
-      if (filialesData.length > 0) {
-        const primeraFilialActiva = filialesData.find((f: Filial) => f.isActivo);
+      if (filialesConvertidas.length > 0) {
+        const primeraFilialActiva = filialesConvertidas.find(f => f.isActivo);
         if (primeraFilialActiva) {
-          setFilialSeleccionada(primeraFilialActiva.id);
+          setFilialSeleccionada(Number(primeraFilialActiva.id));
         }
       }
       
@@ -100,8 +124,10 @@ export default function ControlTransmisiones() {
   // Cargar reportes
   const cargarReportes = async () => {
     try {
-      const fechaInicio = convertirFechaDesdeSwagger(diasSemana[0].fecha);
-      const fechaFin = convertirFechaDesdeSwagger(diasSemana[diasSemana.length - 1].fecha);
+      if (!diasSemana.length) return;
+      
+      const fechaInicio = diasSemana[0].fecha;
+      const fechaFin = diasSemana[diasSemana.length - 1].fecha;
       
       const reportesData = await getReportesPorFechas(fechaInicio, fechaFin);
       setReportes(reportesData);
@@ -114,10 +140,15 @@ export default function ControlTransmisiones() {
   const getProgramasDeFilial = () => {
     if (!filialSeleccionada) return [];
     
-    const filial = filiales.find(f => f.id === filialSeleccionada);
+    const filial = filiales.find(f => Number(f.id) === filialSeleccionada);
     if (!filial || !filial.programaIds) return [];
     
-    return programas.filter(p => filial.programaIds?.includes(p.id));
+    return programas.filter(p => {
+      // Verificar si el programa está asociado a la filial
+      return filial.programaIds?.includes(Number(p.id)) || 
+             Number(p.filialId) === filialSeleccionada ||
+             p.filialesIds?.includes(filialSeleccionada);
+    });
   };
 
   // Manejar cambio de filial
@@ -127,12 +158,14 @@ export default function ControlTransmisiones() {
     
     // Seleccionar primer programa de la filial
     const programasFilial = programas.filter(p => {
-      const filial = filiales.find(f => f.id === filialId);
-      return filial?.programaIds?.includes(p.id);
+      const filial = filiales.find(f => Number(f.id) === filialId);
+      return filial?.programaIds?.includes(Number(p.id)) || 
+             Number(p.filialId) === filialId ||
+             p.filialesIds?.includes(filialId);
     });
     
     if (programasFilial.length > 0) {
-      setProgramaSeleccionado(programasFilial[0].id);
+      setProgramaSeleccionado(Number(programasFilial[0].id));
     }
   };
 
@@ -147,8 +180,8 @@ export default function ControlTransmisiones() {
 
   // Abrir formulario
   const abrirFormulario = (filialId: number, programaId: number, dia: string, fecha: string) => {
-    const filial = filiales.find(f => f.id === filialId);
-    const programa = programas.find(p => p.id === programaId);
+    const filial = filiales.find(f => Number(f.id) === filialId);
+    const programa = programas.find(p => Number(p.id) === programaId);
     const reporte = getReporte(filialId, programaId, fecha);
     
     if (!filial || !programa) return;
@@ -250,7 +283,14 @@ export default function ControlTransmisiones() {
 
   // Verificar si un programa se transmite en un día
   const programaTransmiteEnDia = (programa: Programa, dia: string): boolean => {
-    return programa.diasSemana?.includes(dia) || false;
+    // Normalizar nombre del día
+    const diaNormalizado = dia.toUpperCase();
+    
+    // Comprobar si el programa tiene este día en su lista de diasSemana
+    return programa.diasSemana?.some(d => 
+      d.toUpperCase() === diaNormalizado || 
+      d.toUpperCase().startsWith(diaNormalizado.substring(0, 3))
+    ) || false;
   };
 
   // Renderizar indicador de estado
@@ -337,7 +377,7 @@ export default function ControlTransmisiones() {
           </svg>
           <span>
             {programaSeleccionado 
-              ? programas.find(p => p.id === programaSeleccionado)?.nombre 
+              ? programas.find(p => Number(p.id) === programaSeleccionado)?.nombre 
               : "Sistema de Control de Transmisiones"}
           </span>
         </div>
@@ -397,11 +437,11 @@ export default function ControlTransmisiones() {
                 <div
                   key={filial.id}
                   className={`flex justify-between px-6 py-3 cursor-pointer hover:bg-blue-50 transition-colors ${
-                    filialSeleccionada === filial.id ? "bg-blue-50 border-l-4 border-blue-600 font-medium" : ""
+                    filialSeleccionada === Number(filial.id) ? "bg-blue-50 border-l-4 border-blue-600 font-medium" : ""
                   }`}
-                  onClick={() => handleFilialClick(filial.id)}
+                  onClick={() => handleFilialClick(Number(filial.id))}
                 >
-                  <div className={filialSeleccionada === filial.id ? "text-blue-700" : "text-gray-700"}>
+                  <div className={filialSeleccionada === Number(filial.id) ? "text-blue-700" : "text-gray-700"}>
                     {filial.nombre}
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -423,11 +463,11 @@ export default function ControlTransmisiones() {
                   <button
                     key={prog.id}
                     className={`px-6 py-4 whitespace-nowrap border-b-2 transition-all duration-200 ${
-                      programaSeleccionado === prog.id
+                      programaSeleccionado === Number(prog.id)
                         ? "text-blue-600 border-blue-600 font-medium"
                         : "text-gray-600 border-transparent hover:text-blue-600 hover:border-blue-300"
                     }`}
-                    onClick={() => setProgramaSeleccionado(prog.id)}
+                    onClick={() => setProgramaSeleccionado(Number(prog.id))}
                   >
                     <div className="text-sm">{prog.nombre}</div>
                     <div className="text-xs text-gray-500">{prog.horario || prog.horaInicio}</div>
@@ -454,7 +494,7 @@ export default function ControlTransmisiones() {
                 {/* Estados de transmisión */}
                 <div className="grid grid-cols-6 gap-4">
                   {diasSemana.map((dia, idx) => {
-                    const programa = programas.find(p => p.id === programaSeleccionado);
+                    const programa = programas.find(p => Number(p.id) === programaSeleccionado);
                     if (!programa) return null;
                     
                     const transmiteEnDia = programaTransmiteEnDia(programa, dia.nombre);

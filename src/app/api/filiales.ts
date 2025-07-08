@@ -1,65 +1,25 @@
 import { Filial, FilialInput } from '../types/filial';
+// Importación corregida - ajusta la ruta según tu estructura de carpetas
+import * as apiAdapter from '../../services/api-adapter';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-
+// Estos métodos ahora redirigen al adaptador API que maneja
+// la estructura específica de tu backend
 export async function getFiliales(): Promise<Filial[]> {
-  const response = await fetch(`${API_URL}/api/filiales`);
-  
-  if (!response.ok) {
-    throw new Error('Error al obtener filiales');
-  }
-  
-  return response.json();
+  return await apiAdapter.getFiliales();
 }
 
 export async function getFilial(id: string | number): Promise<Filial> {
-  const response = await fetch(`${API_URL}/api/filiales/${id}`);
-  
-  if (!response.ok) {
-    throw new Error(`Error al obtener filial con ID ${id}`);
-  }
-  
-  return response.json();
+  return await apiAdapter.getFilial(id);
 }
 
 export async function createFilial(filial: FilialInput): Promise<Filial> {
-  const response = await fetch(`${API_URL}/api/filiales`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(filial),
-  });
-  
-  if (!response.ok) {
-    throw new Error('Error al crear filial');
-  }
-  
-  return response.json();
+  return await apiAdapter.createFilial(filial);
 }
 
 export async function updateFilial(id: string | number, filial: FilialInput): Promise<Filial> {
-  const response = await fetch(`${API_URL}/api/filiales/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(filial),
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Error al actualizar filial con ID ${id}`);
-  }
-  
-  return response.json();
+  return await apiAdapter.updateFilial(id, filial);
 }
 
 export async function deleteFilial(id: string | number): Promise<void> {
-  const response = await fetch(`${API_URL}/api/filiales/${id}`, {
-    method: 'DELETE',
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Error al eliminar filial con ID ${id}`);
-  }
+  return await apiAdapter.deleteFilial(id);
 }

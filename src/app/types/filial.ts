@@ -1,13 +1,22 @@
 export interface Filial {
   id: string | number;
   nombre: string;
+  activa: boolean;
+  
+  // Campos opcionales que pueden existir en el backend
   descripcion?: string;
   ubicacion?: string;
-  fechaCreacion: string; // ISO date string
-  activa: boolean;
+  fechaCreacion?: string;
+  isActivo?: boolean;
+  programaIds?: number[];
+  programas?: any[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// Tipo para crear una filial (sin ID ya que será generado por el backend)
-export type FilialInput = Omit<Filial, 'id' | 'fechaCreacion'> & {
-  fechaCreacion?: string;
+// Tipo simplificado para crear o actualizar filiales
+// Incluye solo los campos que realmente necesita el backend
+export type FilialInput = {
+  nombre: string;
+  activa: boolean;
 };

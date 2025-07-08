@@ -6,18 +6,19 @@ import { Filial, FilialInput } from '@/app/types/filial';
 
 interface FilialFormProps {
   filial?: Filial;
-  onSubmit: (filial: FilialInput) => Promise<void>; // Corregido para usar FilialInput
+  onSubmit: (filial: FilialInput) => Promise<void>;
   isEditing?: boolean;
 }
 
 export default function FilialForm({ filial, onSubmit, isEditing = false }: FilialFormProps) {
   const router = useRouter();
+  
+  // Simplificado para incluir solo lo necesario para el backend
   const [formData, setFormData] = useState<FilialInput>({
     nombre: '',
-    descripcion: '',
-    ubicacion: '',
     activa: true,
   });
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,8 +26,6 @@ export default function FilialForm({ filial, onSubmit, isEditing = false }: Fili
     if (filial) {
       setFormData({
         nombre: filial.nombre,
-        descripcion: filial.descripcion || '',
-        ubicacion: filial.ubicacion || '',
         activa: filial.activa,
       });
     }
@@ -79,34 +78,6 @@ export default function FilialForm({ filial, onSubmit, isEditing = false }: Fili
             value={formData.nombre}
             onChange={handleChange}
             required
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">
-            Descripción
-          </label>
-          <textarea
-            id="descripcion"
-            name="descripcion"
-            value={formData.descripcion}
-            onChange={handleChange}
-            rows={3}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="ubicacion" className="block text-sm font-medium text-gray-700 mb-1">
-            Ubicación
-          </label>
-          <input
-            type="text"
-            id="ubicacion"
-            name="ubicacion"
-            value={formData.ubicacion}
-            onChange={handleChange}
             className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>

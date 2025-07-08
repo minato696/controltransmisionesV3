@@ -115,7 +115,8 @@ export default function DetalleFilialPage() {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Fecha de Creación</dt>
                   <dd className="mt-1 text-sm text-gray-900">
-                    {new Date(filial.fechaCreacion).toLocaleDateString()}
+                    {/* Aquí corregimos el error de fecha, verificando si fechaCreacion existe */}
+                    {filial.fechaCreacion ? new Date(filial.fechaCreacion).toLocaleDateString() : '—'}
                   </dd>
                 </div>
               </dl>
@@ -154,7 +155,7 @@ export default function DetalleFilialPage() {
                           <div>
                             <h3 className="text-sm font-medium">{programa.nombre}</h3>
                             <p className="text-xs text-gray-500 mt-1">
-                              {new Date(programa.fechaInicio).toLocaleDateString()}
+                              {programa.fechaInicio ? new Date(programa.fechaInicio).toLocaleDateString() : '—'}
                               {programa.fechaFin && ` - ${new Date(programa.fechaFin).toLocaleDateString()}`}
                             </p>
                           </div>

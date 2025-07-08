@@ -17,18 +17,29 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
   const searchParams = useSearchParams();
   const preselectedFilialId = searchParams.get('filialId');
   
+  // Formulario simplificado con solo los campos necesarios para el backend
   const [formData, setFormData] = useState<ProgramaInput>({
     nombre: '',
-    descripcion: '',
     filialId: preselectedFilialId || '',
-    fechaInicio: new Date().toISOString().split('T')[0],
-    fechaFin: '',
     estado: 'activo',
+    diasSemana: ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES'],
+    horaInicio: '08:00'
   });
   
   const [filiales, setFiliales] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Días de la semana disponibles
+  const diasSemanaOpciones = [
+    { value: 'LUNES', label: 'Lunes' },
+    { value: 'MARTES', label: 'Martes' },
+    { value: 'MIÉRCOLES', label: 'Miércoles' },
+    { value: 'JUEVES', label: 'Jueves' },
+    { value: 'VIERNES', label: 'Viernes' },
+    { value: 'SÁBADO', label: 'Sábado' },
+    { value: 'DOMINGO', label: 'Domingo' }
+  ];
 
   useEffect(() => {
     // Cargar filiales
@@ -48,13 +59,10 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
     if (programa) {
       setFormData({
         nombre: programa.nombre,
-        descripcion: programa.descripcion,
         filialId: programa.filialId,
-        fechaInicio: new Date(programa.fechaInicio).toISOString().split('T')[0],
-        fechaFin: programa.fechaFin 
-          ? new Date(programa.fechaFin).toISOString().split('T')[0] 
-          : '',
         estado: programa.estado,
+        diasSemana: programa.diasSemana || ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES'],
+        horaInicio: programa.horaInicio || programa.horario || '08:00'
       });
     }
   }, [programa, preselectedFilialId]);
@@ -64,6 +72,20 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
   ) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Maneja los cambios en las casillas de verificación de días
+  const handleDiaChange = (dia: string) => {
+    setFormData(prev => {
+      const diasActuales = prev.diasSemana || [];
+      if (diasActuales.includes(dia)) {
+        // Si ya está seleccionado, lo quitamos
+        return { ...prev, diasSemana: diasActuales.filter(d => d !== dia) };
+      } else {
+        // Si no está seleccionado, lo añadimos
+        return { ...prev, diasSemana: [...diasActuales, dia] };
+      }
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,21 +129,6 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
         </div>
 
         <div>
-          <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">
-            Descripción*
-          </label>
-          <textarea
-            id="descripcion"
-            name="descripcion"
-            value={formData.descripcion}
-            onChange={handleChange}
-            required
-            rows={3}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
-        <div>
           <label htmlFor="filialId" className="block text-sm font-medium text-gray-700 mb-1">
             Filial*
           </label>
@@ -142,37 +149,6 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
           </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="fechaInicio" className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha de Inicio*
-            </label>
-            <input
-              type="date"
-              id="fechaInicio"
-              name="fechaInicio"
-              value={formData.fechaInicio}
-              onChange={handleChange}
-              required
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="fechaFin" className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha de Fin (opcional)
-            </label>
-            <input
-              type="date"
-              id="fechaFin"
-              name="fechaFin"
-              value={formData.fechaFin}
-              onChange={handleChange}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-
         <div>
           <label htmlFor="estado" className="block text-sm font-medium text-gray-700 mb-1">
             Estado*
@@ -189,6 +165,43 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
             <option value="inactivo">Inactivo</option>
             <option value="finalizado">Finalizado</option>
           </select>
+        </div>
+
+        <div>
+          <label htmlFor="horaInicio" className="block text-sm font-medium text-gray-700 mb-1">
+            Hora de Inicio*
+          </label>
+          <input
+            type="time"
+            id="horaInicio"
+            name="horaInicio"
+            value={formData.horaInicio}
+            onChange={handleChange}
+            required
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Días de Transmisión*
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {diasSemanaOpciones.map((dia) => (
+              <div key={dia.value} className="flex items-center">
+                <input
+                  type="checkbox"
+                  id={`dia-${dia.value}`}
+                  checked={formData.diasSemana?.includes(dia.value) || false}
+                  onChange={() => handleDiaChange(dia.value)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor={`dia-${dia.value}`} className="ml-2 block text-sm text-gray-700">
+                  {dia.label}
+                </label>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
