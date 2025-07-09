@@ -94,11 +94,36 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
     setError(null);
 
     try {
+      // Validar que al menos haya un día seleccionado
+      if (!formData.diasSemana || formData.diasSemana.length === 0) {
+        setError('Debe seleccionar al menos un día de transmisión');
+        setLoading(false);
+        return;
+      }
+      
+      // Validar que haya una filial seleccionada
+      if (!formData.filialId) {
+        setError('Debe seleccionar una filial');
+        setLoading(false);
+        return;
+      }
+      
+      // Log para debug
+      console.log('Datos del formulario antes de enviar:', formData);
+      
       await onSubmit(formData);
       router.push('/admin/programas');
-    } catch (err) {
-      console.error(err);
-      setError('Error al guardar el programa');
+    } catch (err: any) {
+      console.error('Error al guardar programa:', err);
+      
+      // Mostrar mensaje de error más específico si está disponible
+      if (err.response?.data?.message) {
+        setError(`Error: ${err.response.data.message}`);
+      } else if (err.response?.data) {
+        setError(`Error: ${JSON.stringify(err.response.data)}`);
+      } else {
+        setError('Error al guardar el programa. Por favor, verifique los datos e intente nuevamente.');
+      }
     } finally {
       setLoading(false);
     }

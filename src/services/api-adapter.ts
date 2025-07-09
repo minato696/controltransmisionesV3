@@ -203,16 +203,21 @@ function prepararFilialParaBackend(filial: FilialInput): any {
  */
 function prepararProgramaParaBackend(programa: ProgramaInput): any {
   // Convertir string de hora a objeto hora para el backend
-  const [horas, minutos] = (programa.horaInicio || '00:00').split(':').map(Number);
+  const [horas, minutos] = (programa.horaInicio || '08:00').split(':').map(Number);
   const horaInicio = {
-    hour: horas || 0,
+    hour: horas || 8,
     minute: minutos || 0,
     second: 0,
     nano: 0
   };
   
-  // Asegurarse de que diasSemana sea un array
-  const diasSemana = Array.isArray(programa.diasSemana) ? programa.diasSemana : ['LUNES'];
+  // Asegurarse de que diasSemana sea un array y no esté vacío
+  let diasSemana = Array.isArray(programa.diasSemana) ? programa.diasSemana : ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES'];
+  
+  // Si el array está vacío, usar valores por defecto
+  if (diasSemana.length === 0) {
+    diasSemana = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES'];
+  }
   
   // El objeto que espera el backend
   return {
@@ -357,18 +362,37 @@ export async function getProgramasByFilial(filialId: string | number): Promise<P
 export async function createPrograma(programa: ProgramaInput): Promise<Programa> {
   try {
     const programaData = prepararProgramaParaBackend(programa);
+    
+    // Log para debug
+    console.log('Enviando programa al backend:', programaData);
+    
     const response = await api.post<ProgramaBackend>('/programa', programaData);
     
     // Si hay una filial asociada, asignar el programa a esa filial
-    if (programa.filialId) {
-      await api.put(`/programa/${response.data.id}/filiales`, {
-        filialIds: [Number(programa.filialId)]
-      });
+    if (programa.filialId && response.data.id) {
+      try {
+        await api.put(`/programa/${response.data.id}/filiales`, {
+          filialIds: [Number(programa.filialId)]
+        });
+      } catch (err) {
+        console.error('Error al asociar filial al programa:', err);
+        // No lanzar error aquí, el programa ya fue creado
+      }
     }
     
     return transformarPrograma(response.data);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al crear programa:', error);
+    
+    // Si hay una respuesta del servidor, mostrar más detalles
+    if (error.response) {
+      console.error('Detalles del error:', {
+        status: error.response.status,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+    }
+    
     throw error;
   }
 }

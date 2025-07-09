@@ -157,26 +157,23 @@ export const transformarReportes = (reportesBackend: ReporteBackend[]) => {
 
 // ==================== FUNCIONES PARA ADAPTAR LOS DATOS AL BACKEND ====================
 
-// Función corregida para preparar los datos de filial para el backend
-export const transformarProgramaParaBackend = (programa: ProgramaInput): ProgramaBackend => {
+// Función corregida para preparar los datos de programa para el backend
+export const transformarProgramaParaBackend = (programa: ProgramaInput): any => {
+  // El backend espera diasSemana como string, no array
+  let diasSemana = 'LUNES';
+  if (Array.isArray(programa.diasSemana) && programa.diasSemana.length > 0) {
+    diasSemana = programa.diasSemana[0];
+  } else if (typeof programa.diasSemana === 'string') {
+    diasSemana = programa.diasSemana;
+  }
+  
   return {
     id: 0, // El ID será asignado por el backend en la creación
     nombre: programa.nombre,
-    descripcion: programa.descripcion,
-    horaInicio: programa.fechaInicio ? new Date(programa.fechaInicio).toTimeString().slice(0, 5) : '08:00',
+    horaInicio: programa.horaInicio || '08:00',
     isActivo: programa.estado === 'activo',
-    diasSemana: programa.diasSemana || ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES']
-  } as ProgramaBackend;
-};
-
-// Función corregida para preparar los datos de filial para el backend
-// Solo incluye los campos que el backend espera
-export const transformarFilialParaBackend = (filial: FilialInput): FilialBackend => {
-  return {
-    id: 0, // El ID será asignado por el backend en la creación
-    nombre: filial.nombre,
-    isActivo: filial.activa
-  } as FilialBackend;
+    diasSemana: diasSemana // Ahora es string
+  };
 };
 
 // ==================== ENDPOINTS ====================
