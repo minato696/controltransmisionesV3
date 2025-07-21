@@ -1,3 +1,6 @@
+// ===================================================================
+// ARCHIVO: src/app/admin/programas/page.tsx
+// ===================================================================
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -89,7 +92,7 @@ export default function ProgramasList() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filial</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filiales</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fechas</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -104,7 +107,36 @@ export default function ProgramasList() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {filiales[programa.filialId]?.nombre || 'Desconocida'}
+                      {(() => {
+                        // Obtener todas las filiales del programa
+                        const filialesDelPrograma: string[] = [];
+                        
+                        if (programa.filialesIds && programa.filialesIds.length > 0) {
+                          programa.filialesIds.forEach(id => {
+                            const filial = filiales[id];
+                            if (filial) {
+                              filialesDelPrograma.push(filial.nombre);
+                            }
+                          });
+                        } else if (programa.filialId && filiales[programa.filialId]) {
+                          filialesDelPrograma.push(filiales[programa.filialId].nombre);
+                        }
+                        
+                        if (filialesDelPrograma.length === 0) {
+                          return 'Sin filiales';
+                        } else if (filialesDelPrograma.length === 1) {
+                          return filialesDelPrograma[0];
+                        } else {
+                          return (
+                            <div className="flex items-center">
+                              <span>{filialesDelPrograma[0]}</span>
+                              <span className="ml-1 text-xs bg-gray-200 text-gray-600 rounded-full px-2 py-0.5">
+                                +{filialesDelPrograma.length - 1}
+                              </span>
+                            </div>
+                          );
+                        }
+                      })()}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

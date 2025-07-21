@@ -1,3 +1,4 @@
+// ARCHIVO: src/app/admin/programas/components/ProgramaForm.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -25,6 +26,9 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
     diasSemana: ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES'],
     horaInicio: '08:00'
   });
+  
+  // Estado adicional para manejar múltiples filiales
+  const [filialesSeleccionadas, setFilialesSeleccionadas] = useState<number[]>([]);
   
   const [filiales, setFiliales] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,6 +68,20 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
         diasSemana: programa.diasSemana || ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES'],
         horaInicio: programa.horaInicio || programa.horario || '08:00'
       });
+      
+      // Cargar las filiales seleccionadas
+      if (programa.filialesIds && programa.filialesIds.length > 0) {
+        // ⬇️⬇️⬇️ AQUÍ ESTÁ LA CORRECCIÓN DEL ERROR ⬇️⬇️⬇️
+        // Convertir todos los IDs a números
+        setFilialesSeleccionadas(programa.filialesIds.map(id => Number(id)));
+        // ⬆️⬆️⬆️ FIN DE LA CORRECCIÓN ⬆️⬆️⬆️
+      } else if (programa.filialId) {
+        // Si solo hay una filial, agregarla a las seleccionadas
+        setFilialesSeleccionadas([Number(programa.filialId)]);
+      }
+    } else if (preselectedFilialId) {
+      // Si hay una filial preseleccionada (desde la URL), agregarla
+      setFilialesSeleccionadas([Number(preselectedFilialId)]);
     }
   }, [programa, preselectedFilialId]);
 
@@ -88,6 +106,19 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
     });
   };
 
+  // Maneja los cambios en las casillas de verificación de filiales
+  const handleFilialChange = (filialId: number) => {
+    setFilialesSeleccionadas(prev => {
+      if (prev.includes(filialId)) {
+        // Si ya está seleccionada, la quitamos
+        return prev.filter(id => id !== filialId);
+      } else {
+        // Si no está seleccionada, la añadimos
+        return [...prev, filialId];
+      }
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -101,17 +132,27 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
         return;
       }
       
-      // Validar que haya una filial seleccionada
-      if (!formData.filialId) {
-        setError('Debe seleccionar una filial');
+      // Validar que haya al menos una filial seleccionada
+      if (filialesSeleccionadas.length === 0) {
+        setError('Debe seleccionar al menos una filial');
         setLoading(false);
         return;
       }
       
       // Log para debug
       console.log('Datos del formulario antes de enviar:', formData);
+      console.log('Filiales seleccionadas:', filialesSeleccionadas);
       
-      await onSubmit(formData);
+      // Preparar datos para enviar
+      const datosPrograma = {
+        ...formData,
+        // Usar la primera filial seleccionada como filialId principal (por compatibilidad)
+        filialId: filialesSeleccionadas[0].toString(),
+        // Incluir todas las filiales seleccionadas como números
+        filialesIds: filialesSeleccionadas.map(id => Number(id))
+      };
+      
+      await onSubmit(datosPrograma);
       router.push('/admin/programas');
     } catch (err: any) {
       console.error('Error al guardar programa:', err);
@@ -154,24 +195,39 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
         </div>
 
         <div>
-          <label htmlFor="filialId" className="block text-sm font-medium text-gray-700 mb-1">
-            Filial*
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Filiales* (Selecciona al menos una)
           </label>
-          <select
-            id="filialId"
-            name="filialId"
-            value={formData.filialId}
-            onChange={handleChange}
-            required
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Selecciona una filial</option>
-            {filiales.map((filial) => (
-              <option key={filial.id} value={filial.id}>
-                {filial.nombre}
-              </option>
-            ))}
-          </select>
+          <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto">
+            {filiales.length === 0 ? (
+              <p className="text-sm text-gray-500">No hay filiales disponibles</p>
+            ) : (
+              <div className="space-y-2">
+                {filiales.map((filial) => (
+                  <div key={filial.id} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={`filial-${filial.id}`}
+                      checked={filialesSeleccionadas.includes(Number(filial.id))}
+                      onChange={() => handleFilialChange(Number(filial.id))}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label 
+                      htmlFor={`filial-${filial.id}`} 
+                      className="ml-2 block text-sm text-gray-700 cursor-pointer"
+                    >
+                      {filial.nombre}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {filialesSeleccionadas.length > 0 && (
+            <p className="mt-1 text-sm text-gray-600">
+              {filialesSeleccionadas.length} filial(es) seleccionada(s)
+            </p>
+          )}
         </div>
 
         <div>

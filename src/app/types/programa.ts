@@ -12,17 +12,18 @@ export interface Programa {
   horaInicio?: string;
   isActivo?: boolean;
   diasSemana?: string[];
-  filialesIds?: number[];
+  filialesIds?: (string | number)[];  // Puede contener strings o números
   createdAt?: string;
   updatedAt?: string;
 }
 
-// Tipo simplificado para crear un programa
-// Solo incluye los campos necesarios para el backend
+// Tipo actualizado para crear un programa
+// Ahora soporta múltiples filiales
 export type ProgramaInput = {
   nombre: string;
   estado: 'activo' | 'inactivo' | 'finalizado';
-  filialId: string | number;
+  filialId?: string | number;        // Mantenido para compatibilidad
+  filialIds?: (string | number)[];   // Nuevo campo para múltiples filiales
   diasSemana?: string[];
   horaInicio?: string;
 };

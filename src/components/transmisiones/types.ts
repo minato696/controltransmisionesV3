@@ -1,3 +1,5 @@
+// ARCHIVO: src/components/transmisiones/types.ts
+
 // Importar los tipos básicos desde la app
 import { Filial as FilialBase } from '@/app/types/filial';
 import { Programa as ProgramaBase } from '@/app/types/programa';
@@ -7,11 +9,12 @@ export interface Programa extends ProgramaBase {
   horario: string;
   diasSemana: string[];
   isActivo: boolean;
+  filialesIds?: (string | number)[];  // Puede contener strings o números
 }
 
 export interface Filial extends FilialBase {
   isActivo: boolean;
-  programaIds?: number[];
+  programaIds?: number[];  // Siempre números
 }
 
 export interface Reporte {

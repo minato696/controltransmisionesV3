@@ -135,6 +135,9 @@ function transformarPrograma(programaBackend: ProgramaBackend): Programa {
   const diasSemana = normalizarDiasSemana(programaBackend.diasSemana);
   const horaInicio = horaBackendToString(programaBackend.horaInicio);
   
+  // Extraer IDs de filiales si vienen en el programa
+  const filialesIds = programaBackend.filiales?.map(f => f.id) || [];
+  
   return {
     id: programaBackend.id,
     nombre: programaBackend.nombre,
@@ -147,7 +150,7 @@ function transformarPrograma(programaBackend: ProgramaBackend): Programa {
     horaInicio: horaInicio,
     isActivo: programaBackend.isActivo,
     diasSemana: diasSemana,
-    filialesIds: programaBackend.filiales?.map(f => f.id) || [],
+    filialesIds: filialesIds,
     createdAt: programaBackend.createdAt,
     updatedAt: programaBackend.updateAt
   };
@@ -368,19 +371,23 @@ export async function createPrograma(programa: ProgramaInput): Promise<Programa>
     
     const response = await api.post<ProgramaBackend>('/programa', programaData);
     
-    // Si hay una filial asociada, asignar el programa a esa filial
-    if (programa.filialId && response.data.id) {
+    // Si hay filiales asociadas, asignar el programa a esas filiales
+    const filialesIds = (programa as any).filialesIds || [];
+    if (filialesIds.length > 0 && response.data.id) {
       try {
+        console.log('Asociando filiales al programa:', filialesIds);
         await api.put(`/programa/${response.data.id}/filiales`, {
-          filialIds: [Number(programa.filialId)]
+          filialIds: filialesIds
         });
       } catch (err) {
-        console.error('Error al asociar filial al programa:', err);
+        console.error('Error al asociar filiales al programa:', err);
         // No lanzar error aquí, el programa ya fue creado
       }
     }
     
-    return transformarPrograma(response.data);
+    // Obtener el programa actualizado con las filiales
+    const programaActualizado = await getPrograma(response.data.id);
+    return programaActualizado;
   } catch (error: any) {
     console.error('Error al crear programa:', error);
     
@@ -402,14 +409,22 @@ export async function updatePrograma(id: string | number, programa: ProgramaInpu
     const programaData = prepararProgramaParaBackend(programa);
     const response = await api.put<ProgramaBackend>(`/programa/${id}`, programaData);
     
-    // Si hay una filial asociada, actualizar la relación
-    if (programa.filialId) {
-      await api.put(`/programa/${id}/filiales`, {
-        filialIds: [Number(programa.filialId)]
-      });
+    // Si hay filiales asociadas, actualizar la relación
+    const filialesIds = (programa as any).filialesIds || [];
+    if (filialesIds.length > 0) {
+      try {
+        console.log('Actualizando filiales del programa:', filialesIds);
+        await api.put(`/programa/${id}/filiales`, {
+          filialIds: filialesIds
+        });
+      } catch (err) {
+        console.error('Error al actualizar filiales del programa:', err);
+      }
     }
     
-    return transformarPrograma(response.data);
+    // Obtener el programa actualizado con las filiales
+    const programaActualizado = await getPrograma(id);
+    return programaActualizado;
   } catch (error) {
     console.error(`Error al actualizar programa con ID ${id}:`, error);
     throw error;

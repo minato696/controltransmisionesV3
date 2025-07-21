@@ -137,17 +137,24 @@ export default function ControlTransmisiones() {
   };
 
   // Obtener programas de la filial seleccionada
-  const getProgramasDeFilial = () => {
+   const getProgramasDeFilial = () => {
     if (!filialSeleccionada) return [];
     
     const filial = filiales.find(f => Number(f.id) === filialSeleccionada);
-    if (!filial || !filial.programaIds) return [];
+    if (!filial) return [];
     
     return programas.filter(p => {
       // Verificar si el programa está asociado a la filial
-      return filial.programaIds?.includes(Number(p.id)) || 
-             Number(p.filialId) === filialSeleccionada ||
-             p.filialesIds?.includes(filialSeleccionada);
+      // Primero verificar filialesIds (múltiples filiales)
+      if (p.filialesIds && p.filialesIds.length > 0) {
+        return p.filialesIds.includes(filialSeleccionada);
+      }
+      // Luego verificar programaIds de la filial
+      if (filial.programaIds && filial.programaIds.includes(Number(p.id))) {
+        return true;
+      }
+      // Finalmente verificar filialId único (compatibilidad)
+      return Number(p.filialId) === filialSeleccionada;
     });
   };
 
@@ -158,10 +165,18 @@ export default function ControlTransmisiones() {
     
     // Seleccionar primer programa de la filial
     const programasFilial = programas.filter(p => {
+      // Verificar si el programa está asociado a la filial
+      // Primero verificar filialesIds (múltiples filiales)
+      if (p.filialesIds && p.filialesIds.length > 0) {
+        return p.filialesIds.includes(filialId);
+      }
+      // Luego verificar programaIds de la filial
       const filial = filiales.find(f => Number(f.id) === filialId);
-      return filial?.programaIds?.includes(Number(p.id)) || 
-             Number(p.filialId) === filialId ||
-             p.filialesIds?.includes(filialId);
+      if (filial?.programaIds?.includes(Number(p.id))) {
+        return true;
+      }
+      // Finalmente verificar filialId único (compatibilidad)
+      return Number(p.filialId) === filialId;
     });
     
     if (programasFilial.length > 0) {

@@ -1,3 +1,6 @@
+// ===================================================================
+// ARCHIVO: src/app/admin/programas/[id]/page.tsx
+// ===================================================================
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,6 +18,7 @@ export default function DetalleProgramaPage() {
   
   const [programa, setPrograma] = useState<Programa | null>(null);
   const [filial, setFilial] = useState<Filial | null>(null);
+  const [filiales, setFiliales] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,11 +28,30 @@ export default function DetalleProgramaPage() {
         const programaData = await getPrograma(programaId);
         setPrograma(programaData);
         
-        try {
-          const filialData = await getFilial(programaData.filialId);
-          setFilial(filialData);
-        } catch (err) {
-          console.error('Error al cargar la filial:', err);
+        // Cargar todas las filiales asociadas
+        const filialesAsociadas: Filial[] = [];
+        if (programaData.filialesIds && programaData.filialesIds.length > 0) {
+          for (const filialId of programaData.filialesIds) {
+            try {
+              const filialData = await getFilial(filialId);
+              filialesAsociadas.push(filialData);
+            } catch (err) {
+              console.error(`Error al cargar filial ${filialId}:`, err);
+            }
+          }
+        } else if (programaData.filialId) {
+          // Compatibilidad con programas que solo tienen una filial
+          try {
+            const filialData = await getFilial(programaData.filialId);
+            filialesAsociadas.push(filialData);
+          } catch (err) {
+            console.error('Error al cargar la filial:', err);
+          }
+        }
+        
+        setFiliales(filialesAsociadas);
+        if (filialesAsociadas.length > 0) {
+          setFilial(filialesAsociadas[0]); // Mantener compatibilidad
         }
         
         setLoading(false);
@@ -101,17 +124,22 @@ export default function DetalleProgramaPage() {
                   <dd className="mt-1 text-sm text-gray-900">{programa.descripcion}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Filial</dt>
+                  <dt className="text-sm font-medium text-gray-500">Filiales</dt>
                   <dd className="mt-1 text-sm text-gray-900">
-                    {filial ? (
-                      <Link 
-                        href={`/admin/filiales/${filial.id}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {filial.nombre}
-                      </Link>
+                    {filiales.length > 0 ? (
+                      <div className="space-y-1">
+                        {filiales.map((filial) => (
+                          <Link 
+                            key={filial.id}
+                            href={`/admin/filiales/${filial.id}`}
+                            className="text-blue-600 hover:underline block"
+                          >
+                            {filial.nombre}
+                          </Link>
+                        ))}
+                      </div>
                     ) : (
-                      'Desconocida'
+                      'Sin filiales asignadas'
                     )}
                   </dd>
                 </div>
@@ -155,13 +183,19 @@ export default function DetalleProgramaPage() {
                 >
                   Editar Programa
                 </Link>
-                {filial && (
-                  <Link
-                    href={`/admin/filiales/${filial.id}`}
-                    className="block w-full text-center bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors"
-                  >
-                    Ver Filial
-                  </Link>
+                {filiales.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">Ver filiales:</p>
+                    {filiales.map((filial) => (
+                      <Link
+                        key={filial.id}
+                        href={`/admin/filiales/${filial.id}`}
+                        className="block w-full text-center bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors text-sm"
+                      >
+                        {filial.nombre}
+                      </Link>
+                    ))}
+                  </div>
                 )}
                 <button
                   onClick={handleDelete}
