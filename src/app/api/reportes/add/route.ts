@@ -1,13 +1,15 @@
-// src/app/api/reportes/add/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { ReporteInput } from '@/app/types/reporte';
 
 export async function POST(request: Request) {
   try {
+    console.log('Endpoint /api/reportes/add recibió una solicitud POST');
+    
     const reportesData = await request.json();
+    console.log('Datos recibidos:', reportesData);
     
     if (!Array.isArray(reportesData)) {
+      console.error('Se esperaba un array, pero se recibió:', typeof reportesData);
       return NextResponse.json({ error: 'Se espera un array de reportes' }, { status: 400 });
     }
     
@@ -26,7 +28,7 @@ export async function POST(request: Request) {
         horaReal, 
         hora_tt, 
         observaciones 
-      } = reporteData as ReporteInput;
+      } = reporteData;
       
       // Validar campos obligatorios
       if (!filialId || !programaId || !fecha) {
@@ -35,14 +37,18 @@ export async function POST(request: Request) {
         }, { status: 400 });
       }
       
+      console.log(`Procesando reporte para filial ${filialId}, programa ${programaId}, fecha ${fecha}`);
+      
       // Buscar o crear el estado
-      let estadoId: number | undefined;
+      let estadoId;
       
       // Normalizar el estado para la búsqueda
       const estadoNombre = estadoTransmision || 
                           (estado === 'si' ? 'Si' : 
                            estado === 'no' ? 'No' : 
                            estado === 'tarde' ? 'Tarde' : 'Pendiente');
+      
+      console.log('Buscando estado:', estadoNombre);
       
       const estadoDB = await prisma.estadoTransmision.findFirst({
         where: { nombre: estadoNombre }
@@ -58,6 +64,8 @@ export async function POST(request: Request) {
         estadoId = estadoPendiente?.id;
       }
       
+      console.log('ID de estado encontrado:', estadoId);
+      
       // Si no se encontró ningún estado, retornar error
       if (!estadoId) {
         return NextResponse.json({ 
@@ -66,19 +74,24 @@ export async function POST(request: Request) {
       }
       
       // Buscar el target si existe
-      let targetId: number | undefined;
+      let targetId = null;
       
       if (target) {
+        console.log('Buscando target:', target);
+        
         const targetDB = await prisma.target.findFirst({
           where: { codigo: target }
         });
         
         if (targetDB) {
           targetId = targetDB.id;
+          console.log('ID de target encontrado:', targetId);
         }
       }
       
       // Verificar si ya existe un reporte para esta combinación
+      console.log('Verificando si el reporte ya existe...');
+      
       const reporteExistente = await prisma.reporte.findUnique({
         where: {
           filialId_programaId_fecha: {
@@ -92,12 +105,14 @@ export async function POST(request: Request) {
       let reporte;
       
       if (reporteExistente) {
+        console.log('Actualizando reporte existente con ID:', reporteExistente.id);
+        
         // Actualizar reporte existente
         reporte = await prisma.reporte.update({
           where: { id: reporteExistente.id },
           data: {
             estadoId,
-            targetId: targetId || null,
+            targetId: targetId,
             motivo: motivo || null,
             hora: horaReal || hora || null,
             horaTt: hora_tt || null,
@@ -112,6 +127,8 @@ export async function POST(request: Request) {
           }
         });
       } else {
+        console.log('Creando nuevo reporte');
+        
         // Crear nuevo reporte
         reporte = await prisma.reporte.create({
           data: {
@@ -119,7 +136,7 @@ export async function POST(request: Request) {
             programaId: Number(programaId),
             fecha: new Date(fecha),
             estadoId,
-            targetId: targetId || null,
+            targetId: targetId,
             motivo: motivo || null,
             hora: horaReal || hora || null,
             horaTt: hora_tt || null,
@@ -133,6 +150,8 @@ export async function POST(request: Request) {
           }
         });
       }
+      
+      console.log('Reporte guardado correctamente con ID:', reporte.id);
       
       // Transformar para respuesta
       const reporteTransformado = {
@@ -157,9 +176,13 @@ export async function POST(request: Request) {
       reportesCreados.push(reporteTransformado);
     }
     
+    console.log(`Se procesaron ${reportesCreados.length} reportes correctamente`);
     return NextResponse.json(reportesCreados, { status: 201 });
   } catch (error) {
     console.error('Error al crear reportes:', error);
-    return NextResponse.json({ error: 'Error al crear reportes' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Error al crear reportes',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }

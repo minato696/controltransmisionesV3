@@ -276,6 +276,8 @@ export default function ControlTransmisiones() {
         }
       }
       
+      console.log('Datos a enviar:', datosReporte);
+      
       // Guardar en la API
       await guardarOActualizarReporte(
         transmisionEditar.filialId,
@@ -284,13 +286,23 @@ export default function ControlTransmisiones() {
         datosReporte
       );
       
+      console.log('Reporte guardado exitosamente');
+      
       // Recargar reportes
       await cargarReportes();
       
       setMostrarFormulario(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error al guardar:', err);
-      setError('Error al guardar el reporte. Por favor, intente nuevamente.');
+      
+      // Mostrar mensaje de error detallado
+      if (err.response && err.response.data && err.response.data.error) {
+        setError(`Error: ${err.response.data.error}`);
+      } else if (err.message) {
+        setError(`Error al guardar: ${err.message}`);
+      } else {
+        setError('Error al guardar el reporte. Por favor, intente nuevamente.');
+      }
     } finally {
       setGuardando(false);
     }

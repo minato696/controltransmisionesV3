@@ -74,25 +74,42 @@ export async function getReportesPorFechas(fechaInicio: string, fechaFin: string
   return response.data;
 }
 
+/**
+ * Guarda o actualiza un reporte de transmisión
+ * @param filialId ID de la filial
+ * @param programaId ID del programa
+ * @param fecha Fecha del reporte (formato YYYY-MM-DD)
+ * @param datosReporte Datos adicionales del reporte
+ * @returns El reporte creado o actualizado
+ */
 export async function guardarOActualizarReporte(
   filialId: number, 
   programaId: number, 
   fecha: string, 
   datosReporte: any
 ): Promise<any> {
-  const reporteCompleto = {
-    ...datosReporte,
-    filialId,
-    programaId,
-    fecha
-  };
-  
-  if (reporteCompleto.id_reporte) {
-    const response = await api.put(`/reportes/${reporteCompleto.id_reporte}`, reporteCompleto);
-    return response.data;
-  } else {
-    const response = await api.post('/reportes/add', [reporteCompleto]);
-    return Array.isArray(response.data) ? response.data[0] : response.data;
+  try {
+    const reporteCompleto = {
+      ...datosReporte,
+      filialId,
+      programaId,
+      fecha
+    };
+    
+    // Comprobar si es una actualización o creación
+    if (reporteCompleto.id_reporte) {
+      // Es una actualización
+      const response = await api.put(`/reportes/${reporteCompleto.id_reporte}`, reporteCompleto);
+      return response.data;
+    } else {
+      // Es una creación - la API espera un array de reportes
+      const response = await api.post('/reportes/add', [reporteCompleto]);
+      // Devolver el primer reporte si es un array, o el reporte directamente
+      return Array.isArray(response.data) ? response.data[0] : response.data;
+    }
+  } catch (error) {
+    console.error('Error al guardar o actualizar reporte:', error);
+    throw error;
   }
 }
 
