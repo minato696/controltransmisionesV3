@@ -1,25 +1,23 @@
 import { Filial, FilialInput } from '../types/filial';
-// Importación corregida - ajusta la ruta según tu estructura de carpetas
-import * as apiAdapter from '../../services/api-adapter';
+// Importar desde el nuevo archivo api-client
+import * as apiClient from '../../services/api-client';
 
-// Estos métodos ahora redirigen al adaptador API que maneja
-// la estructura específica de tu backend
 export async function getFiliales(): Promise<Filial[]> {
-  return await apiAdapter.getFiliales();
+  return await apiClient.getFiliales();
 }
 
 export async function getFilial(id: string | number): Promise<Filial> {
-  return await apiAdapter.getFilial(id);
+  return await apiClient.getFilial(id);
 }
 
 export async function createFilial(filial: FilialInput): Promise<Filial> {
-  return await apiAdapter.createFilial(filial);
+  return await apiClient.createFilial(filial);
 }
 
 export async function updateFilial(id: string | number, filial: FilialInput): Promise<Filial> {
-  return await apiAdapter.updateFilial(id, filial);
+  return await apiClient.updateFilial(id, filial);
 }
 
 export async function deleteFilial(id: string | number): Promise<void> {
-  return await apiAdapter.deleteFilial(id);
+  return await apiClient.deleteFilial(id);
 }

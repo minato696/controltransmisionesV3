@@ -18,12 +18,11 @@ export interface Programa {
 }
 
 // Tipo actualizado para crear un programa
-// Ahora soporta múltiples filiales
 export type ProgramaInput = {
   nombre: string;
   estado: 'activo' | 'inactivo' | 'finalizado';
   filialId?: string | number;        // Mantenido para compatibilidad
   filialIds?: (string | number)[];   // Nuevo campo para múltiples filiales
-  diasSemana?: string[];
+  diasSemana?: string[];             // Array de días de semana
   horaInicio?: string;
 };

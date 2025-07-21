@@ -24,7 +24,7 @@ import {
   guardarOActualizarReporte,
   convertirFechaASwagger,
   convertirFechaDesdeSwagger
-} from '../../services/api-adapter';
+} from '../../services/api-client';
 
 export default function ControlTransmisiones() {
   // Estados principales

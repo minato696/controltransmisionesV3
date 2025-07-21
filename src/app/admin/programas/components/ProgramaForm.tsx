@@ -71,10 +71,8 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
       
       // Cargar las filiales seleccionadas
       if (programa.filialesIds && programa.filialesIds.length > 0) {
-        // ⬇️⬇️⬇️ AQUÍ ESTÁ LA CORRECCIÓN DEL ERROR ⬇️⬇️⬇️
         // Convertir todos los IDs a números
         setFilialesSeleccionadas(programa.filialesIds.map(id => Number(id)));
-        // ⬆️⬆️⬆️ FIN DE LA CORRECCIÓN ⬆️⬆️⬆️
       } else if (programa.filialId) {
         // Si solo hay una filial, agregarla a las seleccionadas
         setFilialesSeleccionadas([Number(programa.filialId)]);
@@ -144,13 +142,20 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
       console.log('Filiales seleccionadas:', filialesSeleccionadas);
       
       // Preparar datos para enviar
-      const datosPrograma = {
-        ...formData,
+      const datosPrograma: ProgramaInput = {
+        nombre: formData.nombre,
+        estado: formData.estado,
         // Usar la primera filial seleccionada como filialId principal (por compatibilidad)
         filialId: filialesSeleccionadas[0].toString(),
         // Incluir todas las filiales seleccionadas como números
-        filialesIds: filialesSeleccionadas.map(id => Number(id))
+        filialIds: filialesSeleccionadas.map(id => Number(id)),
+        // Enviar todos los días seleccionados como array
+        diasSemana: formData.diasSemana,
+        // Asegurarnos de que horaInicio sea un string en formato HH:MM
+        horaInicio: typeof formData.horaInicio === 'string' ? formData.horaInicio : '08:00'
       };
+      
+      console.log('Datos finales a enviar:', datosPrograma);
       
       await onSubmit(datosPrograma);
       router.push('/admin/programas');
