@@ -1,51 +1,53 @@
 import { NextResponse } from 'next/server';
-import { Filial } from '@/app/types/filial';
+import { prisma } from '@/lib/prisma';
+import { FilialWithRelations } from '@/types/prisma-extensions';
 
-// Datos de ejemplo
-const filiales: Filial[] = [
-  {
-    id: '1',
-    nombre: 'Filial Central',
-    descripcion: 'Sede principal de la organización',
-    ubicacion: 'Ciudad de México',
-    fechaCreacion: '2023-01-15T00:00:00Z',
-    activa: true,
-  },
-  {
-    id: '2',
-    nombre: 'Filial Norte',
-    descripcion: 'Sucursal en la zona norte',
-    ubicacion: 'Monterrey',
-    fechaCreacion: '2023-03-22T00:00:00Z',
-    activa: true,
-  },
-  {
-    id: '3',
-    nombre: 'Filial Sur',
-    descripcion: 'Sucursal en la zona sur',
-    ubicacion: 'Mérida',
-    fechaCreacion: '2023-05-10T00:00:00Z',
-    activa: false,
-  },
-];
 
 export async function GET() {
-  return NextResponse.json(filiales);
+  try {
+    const filiales = await prisma.filial.findMany({
+      include: {
+        programas: {
+          include: {
+            programa: true
+          }
+        }
+      }
+    });
+    
+    // Transformar datos para el formato esperado por el frontend
+    const transformedFiliales = filiales.map((filial: FilialWithRelations) => ({
+      id: filial.id,
+      nombre: filial.nombre,
+      activa: filial.activa,
+      fechaCreacion: filial.createdAt.toISOString(),
+      isActivo: filial.activa,
+      programaIds: filial.programas.map((p: { programaId: number }) => p.programaId),
+      createdAt: filial.createdAt.toISOString(),
+      updatedAt: filial.updatedAt.toISOString()
+    }));
+    
+    return NextResponse.json(transformedFiliales);
+  } catch (error) {
+    console.error('Error al obtener filiales:', error);
+    return NextResponse.json({ error: 'Error al obtener filiales' }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  
-  const newFilial: Filial = {
-    id: Date.now().toString(),
-    nombre: body.nombre,
-    descripcion: body.descripcion,
-    ubicacion: body.ubicacion,
-    fechaCreacion: new Date().toISOString(),
-    activa: body.activa ?? true,
-  };
-  
-  filiales.push(newFilial);
-  
-  return NextResponse.json(newFilial, { status: 201 });
+  try {
+    const body = await request.json();
+    
+    const newFilial = await prisma.filial.create({
+      data: {
+        nombre: body.nombre,
+        activa: body.activa ?? true
+      }
+    });
+    
+    return NextResponse.json(newFilial, { status: 201 });
+  } catch (error) {
+    console.error('Error al crear filial:', error);
+    return NextResponse.json({ error: 'Error al crear filial' }, { status: 500 });
+  }
 }

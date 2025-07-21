@@ -15,7 +15,6 @@ export interface Filial {
 }
 
 // Tipo simplificado para crear o actualizar filiales
-// Incluye solo los campos que realmente necesita el backend
 export type FilialInput = {
   nombre: string;
   activa: boolean;

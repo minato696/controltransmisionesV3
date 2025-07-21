@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo para filiales
+model Filial {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @db.VarChar(100)
+  activa    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  programas FilialPrograma[]
+  reportes  Reporte[]
+
+  @@map("filiales")
+}
+
+// Modelo para programas
+model Programa {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @db.VarChar(100)
+  descripcion String?  @db.Text
+  horaInicio  String   @map("hora_inicio") @db.VarChar(5) // Formato "HH:MM"
+  estado      String   @default("activo") @db.VarChar(20) // activo, inactivo, finalizado
+  fechaInicio DateTime @map("fecha_inicio") @db.Date
+  fechaFin    DateTime? @map("fecha_fin") @db.Date
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  filiales    FilialPrograma[]
+  diasSemana  ProgramaDia[]
+  reportes    Reporte[]
+
+  @@map("programas")
+}
+
+// Modelo para representar días de la semana
+model DiaSemana {
+  id     Int    @id @default(autoincrement())
+  nombre String @unique @db.VarChar(20) // LUNES, MARTES, etc.
+
+  // Relaciones
+  programas ProgramaDia[]
+
+  @@map("dias_semana")
+}
+
+// Tabla de relación entre programas y días de la semana
+model ProgramaDia {
+  id         Int       @id @default(autoincrement())
+  programaId Int       @map("programa_id")
+  diaSemanaId Int      @map("dia_semana_id")
+  
+  // Relaciones
+  programa   Programa  @relation(fields: [programaId], references: [id], onDelete: Cascade)
+  diaSemana  DiaSemana @relation(fields: [diaSemanaId], references: [id], onDelete: Cascade)
+
+  @@unique([programaId, diaSemanaId])
+  @@map("programa_dias")
+}
+
+// Tabla de relación entre filiales y programas
+model FilialPrograma {
+  id         Int      @id @default(autoincrement())
+  filialId   Int      @map("filial_id")
+  programaId Int      @map("programa_id")
+  
+  // Relaciones
+  filial     Filial   @relation(fields: [filialId], references: [id], onDelete: Cascade)
+  programa   Programa @relation(fields: [programaId], references: [id], onDelete: Cascade)
+
+  @@unique([filialId, programaId])
+  @@map("filial_programa")
+}
+
+// Modelo para estados de transmisión
+model EstadoTransmision {
+  id     Int    @id @default(autoincrement())
+  nombre String @unique @db.VarChar(20) // Pendiente, Si, No, Tarde
+
+  // Relaciones
+  reportes Reporte[]
+
+  @@map("estados_transmision")
+}
+
+// Modelo para targets/motivos
+model Target {
+  id     Int    @id @default(autoincrement())
+  codigo String @unique @db.VarChar(10) // Fta, Enf, P.Tec, etc.
+  nombre String @db.VarChar(50) // Falta, Enfermedad, etc.
+  tipo   String @db.VarChar(20) // no_transmitio, transmitio_tarde, ambos
+
+  // Relaciones
+  reportes Reporte[]
+
+  @@map("targets")
+}
+
+// Modelo para reportes de transmisión
+model Reporte {
+  id            Int       @id @default(autoincrement())
+  filialId      Int       @map("filial_id")
+  programaId    Int       @map("programa_id")
+  fecha         DateTime  @db.Date
+  estadoId      Int       @map("estado_id")
+  hora          String?   @db.VarChar(5) // Formato "HH:MM"
+  horaTt        String?   @map("hora_tt") @db.VarChar(5) // Hora tardía
+  targetId      Int?      @map("target_id")
+  motivo        String?   @db.Text
+  observaciones String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relaciones
+  filial   Filial   @relation(fields: [filialId], references: [id], onDelete: Cascade)
+  programa Programa @relation(fields: [programaId], references: [id], onDelete: Cascade)
+  estado   EstadoTransmision @relation(fields: [estadoId], references: [id])
+  target   Target?  @relation(fields: [targetId], references: [id])
+
+  @@unique([filialId, programaId, fecha])
+  @@map("reportes")
+}
