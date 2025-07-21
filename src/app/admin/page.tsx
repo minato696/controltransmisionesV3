@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { getFiliales } from '@/app/api/filiales';
 import { getProgramas } from '@/app/api/programas';
+import DbInitializer from '@/components/admin/DbInitializer';
 
 export default function AdminDashboard() {
   const [filialesCount, setFilialesCount] = useState(0);
@@ -37,6 +38,9 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Dashboard</h1>
       </div>
+      
+      {/* Inicializador de base de datos */}
+      <DbInitializer />
       
       {error && (
         <div className="bg-red-50 text-red-600 p-4 rounded border border-red-200">

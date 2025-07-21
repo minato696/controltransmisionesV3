@@ -1,6 +1,3 @@
-// ===================================================================
-// ARCHIVO: src/app/admin/programas/page.tsx
-// ===================================================================
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -56,6 +53,42 @@ export default function ProgramasList() {
     }
   };
 
+  // Función para formatear la lista de días
+  const formatDias = (diasSemana: string[] | undefined): string => {
+    if (!diasSemana || diasSemana.length === 0) return 'Sin días';
+    
+    if (diasSemana.length <= 2) {
+      return diasSemana.join(', ');
+    }
+    
+    return `${diasSemana.length} días`;
+  };
+
+  // Función para formatear la lista de filiales
+  const formatFiliales = (filialesIds: (string | number)[] | undefined, filialesObj: Record<string | number, Filial>) => {
+    if (!filialesIds || filialesIds.length === 0) return <span>Sin filiales</span>;
+    
+    // Obtener nombres de filiales
+    const nombres = filialesIds
+      .map(id => filialesObj[id]?.nombre || `Filial ${id}`)
+      .filter(Boolean);
+    
+    if (nombres.length === 0) return <span>Sin filiales</span>;
+    
+    if (nombres.length === 1) {
+      return <span>{nombres[0]}</span>;
+    }
+    
+    return (
+      <div className="flex items-center">
+        <span>{nombres[0]}</span>
+        <span className="ml-1 text-xs bg-gray-200 text-gray-600 rounded-full px-2 py-0.5">
+          +{nombres.length - 1}
+        </span>
+      </div>
+    );
+  };
+
   if (loading) {
     return <div className="text-center p-8">Cargando...</div>;
   }
@@ -93,7 +126,7 @@ export default function ProgramasList() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filiales</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fechas</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transmisión</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
               </tr>
@@ -107,42 +140,13 @@ export default function ProgramasList() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {(() => {
-                        // Obtener todas las filiales del programa
-                        const filialesDelPrograma: string[] = [];
-                        
-                        if (programa.filialesIds && programa.filialesIds.length > 0) {
-                          programa.filialesIds.forEach(id => {
-                            const filial = filiales[id];
-                            if (filial) {
-                              filialesDelPrograma.push(filial.nombre);
-                            }
-                          });
-                        } else if (programa.filialId && filiales[programa.filialId]) {
-                          filialesDelPrograma.push(filiales[programa.filialId].nombre);
-                        }
-                        
-                        if (filialesDelPrograma.length === 0) {
-                          return 'Sin filiales';
-                        } else if (filialesDelPrograma.length === 1) {
-                          return filialesDelPrograma[0];
-                        } else {
-                          return (
-                            <div className="flex items-center">
-                              <span>{filialesDelPrograma[0]}</span>
-                              <span className="ml-1 text-xs bg-gray-200 text-gray-600 rounded-full px-2 py-0.5">
-                                +{filialesDelPrograma.length - 1}
-                              </span>
-                            </div>
-                          );
-                        }
-                      })()}
+                      {formatFiliales(programa.filialesIds, filiales)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {new Date(programa.fechaInicio).toLocaleDateString()}
-                      {programa.fechaFin && ` - ${new Date(programa.fechaFin).toLocaleDateString()}`}
+                      <div>{formatDias(programa.diasSemana)}</div>
+                      <div className="text-xs text-gray-500">{programa.horaInicio || programa.horario}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

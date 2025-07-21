@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,11 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Programa, ProgramaInput } from '@/app/types/programa';
 import { Filial } from '@/app/types/filial';
 import { getFiliales } from '@/app/api/filiales';
-import { 
-  createPrograma, 
-  updatePrograma, 
-  createProgramasPorDias 
-} from '@/services/api-client';
+import { createPrograma, updatePrograma } from '@/services/api-client';
+import axios from 'axios';
 
 interface ProgramaFormProps {
   programa?: Programa;
@@ -23,8 +19,8 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
   const searchParams = useSearchParams();
   const preselectedFilialId = searchParams.get('filialId');
   
-  // Estado para el modo de creación: 'normal' o 'porDias'
-  const [modoCreacion, setModoCreacion] = useState<'normal' | 'porDias'>(isEditing ? 'normal' : 'normal');
+  // Estado para verificar si los días de la semana están inicializados
+  const [diasInicializados, setDiasInicializados] = useState<boolean>(true);
   
   // Formulario simplificado con solo los campos necesarios para el backend
   const [formData, setFormData] = useState<ProgramaInput>({
@@ -69,7 +65,26 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
     return mapeo[dia] || dia;
   };
 
+  // Verificar si los días de la semana están inicializados
+  const verificarDiasInicializados = async () => {
+    try {
+      const response = await axios.get('/api/debug');
+      const diasSemana = response.data.diasSemana || [];
+      setDiasInicializados(diasSemana.length > 0);
+      
+      if (diasSemana.length === 0) {
+        setError('La base de datos no está inicializada. Por favor, vaya al Dashboard y use la opción "Inicializar Base de Datos".');
+      }
+    } catch (err) {
+      console.error('Error al verificar días inicializados:', err);
+      setError('Error al verificar la inicialización de la base de datos.');
+    }
+  };
+
   useEffect(() => {
+    // Verificar si los días de la semana están inicializados
+    verificarDiasInicializados();
+    
     // Cargar filiales
     async function loadFiliales() {
       try {
@@ -119,22 +134,16 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
     // Normalizar el día sin acentos
     const diaNormalizado = normalizarDiaSemana(dia);
     
-    // En modo porDias, permitimos selección múltiple
-    if (modoCreacion === 'porDias') {
-      setFormData(prev => {
-        const diasActuales = prev.diasSemana || [];
-        if (diasActuales.includes(diaNormalizado)) {
-          // Si ya está seleccionado, lo quitamos
-          return { ...prev, diasSemana: diasActuales.filter(d => d !== diaNormalizado) };
-        } else {
-          // Si no está seleccionado, lo añadimos
-          return { ...prev, diasSemana: [...diasActuales, diaNormalizado] };
-        }
-      });
-    } else {
-      // En modo normal, solo seleccionamos un día
-      setFormData(prev => ({ ...prev, diasSemana: [diaNormalizado] }));
-    }
+    setFormData(prev => {
+      const diasActuales = prev.diasSemana || [];
+      if (diasActuales.includes(diaNormalizado)) {
+        // Si ya está seleccionado, lo quitamos
+        return { ...prev, diasSemana: diasActuales.filter(d => d !== diaNormalizado) };
+      } else {
+        // Si no está seleccionado, lo añadimos
+        return { ...prev, diasSemana: [...diasActuales, diaNormalizado] };
+      }
+    });
   };
 
   // Maneja los cambios en las casillas de verificación de filiales
@@ -150,22 +159,20 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
     });
   };
 
-  // Maneja el cambio de modo de creación
-  const handleModoCreacionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setModoCreacion(e.target.value as 'normal' | 'porDias');
-    
-    // Resetear días seleccionados al cambiar de modo
-    if (e.target.value === 'normal') {
-      // En modo normal, solo seleccionamos un día (el primero de la lista)
-      setFormData(prev => ({ 
-        ...prev, 
-        diasSemana: prev.diasSemana && prev.diasSemana.length > 0 ? [prev.diasSemana[0]] : ['LUNES'] 
-      }));
-    }
+  // Redireccionar al dashboard para inicializar la BD
+  const irAInicializarBD = () => {
+    router.push('/admin');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Verificar si la base de datos está inicializada
+    if (!diasInicializados) {
+      setError('La base de datos no está inicializada. Por favor, vaya al Dashboard e inicialice la base de datos primero.');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setExito(null);
@@ -189,50 +196,24 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
       console.log('Datos del formulario antes de enviar:', formData);
       console.log('Filiales seleccionadas:', filialesSeleccionadas);
       
-      if (modoCreacion === 'normal') {
-        // Modo normal: crear un solo programa
-        // Preparar datos para enviar
-        const datosPrograma: ProgramaInput = {
-          nombre: formData.nombre,
-          estado: formData.estado,
-          // Usar la primera filial seleccionada como filialId principal (por compatibilidad)
-          filialId: filialesSeleccionadas[0].toString(),
-          // Incluir todas las filiales seleccionadas como números
-          filialIds: filialesSeleccionadas.map(id => Number(id)),
-          // Enviar todos los días seleccionados como array (normalizados sin acentos)
-          diasSemana: formData.diasSemana?.map(dia => normalizarDiaSemana(dia)),
-          // Asegurarnos de que horaInicio sea un string en formato HH:MM
-          horaInicio: typeof formData.horaInicio === 'string' ? formData.horaInicio : '08:00'
-        };
-        
-        console.log('Datos finales a enviar:', datosPrograma);
-        
-        await onSubmit(datosPrograma);
-        router.push('/admin/programas');
-      } else {
-        // Modo porDias: crear múltiples programas (uno por día)
-        const programasCreados = await createProgramasPorDias({
-          nombre: formData.nombre,
-          diasSemana: formData.diasSemana?.map(dia => normalizarDiaSemana(dia)) || [],
-          horaInicio: typeof formData.horaInicio === 'string' ? formData.horaInicio : '08:00',
-          isActivo: formData.estado === 'activo',
-          filialIds: filialesSeleccionadas
-        });
-        
-        console.log('Programas creados:', programasCreados);
-        
-        setExito(`Se han creado ${programasCreados.length} programas correctamente`);
-        
-        // Resetear el formulario
-        setFormData({
-          nombre: '',
-          filialId: '',
-          estado: 'activo',
-          diasSemana: ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES'],
-          horaInicio: '08:00'
-        });
-        setFilialesSeleccionadas([]);
-      }
+      // Preparar datos para enviar (siempre modo único)
+      const datosPrograma: ProgramaInput = {
+        nombre: formData.nombre,
+        estado: formData.estado,
+        // Usar la primera filial seleccionada como filialId principal (por compatibilidad)
+        filialId: filialesSeleccionadas[0].toString(),
+        // Incluir todas las filiales seleccionadas como números
+        filialIds: filialesSeleccionadas.map(id => Number(id)),
+        // Enviar todos los días seleccionados
+        diasSemana: formData.diasSemana?.map(dia => normalizarDiaSemana(dia)),
+        // Asegurarnos de que horaInicio sea un string en formato HH:MM
+        horaInicio: typeof formData.horaInicio === 'string' ? formData.horaInicio : '08:00'
+      };
+      
+      console.log('Datos finales a enviar:', datosPrograma);
+      
+      await onSubmit(datosPrograma);
+      router.push('/admin/programas');
     } catch (err: any) {
       console.error('Error al guardar programa:', err);
       
@@ -253,35 +234,41 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
     <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
       {error && (
         <div className="bg-red-50 text-red-600 p-4 rounded border border-red-200">
-          {error}
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+              
+              {error.includes('base de datos no está inicializada') && (
+                <button
+                  type="button"
+                  onClick={irAInicializarBD}
+                  className="mt-2 inline-flex items-center px-3 py-1.5 border border-red-300 text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Ir al Dashboard para inicializar la BD
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
       
       {exito && (
         <div className="bg-green-50 text-green-600 p-4 rounded border border-green-200">
-          {exito}
-        </div>
-      )}
-
-      {!isEditing && (
-        <div>
-          <label htmlFor="modoCreacion" className="block text-sm font-medium text-gray-700 mb-1">
-            Modo de Creación
-          </label>
-          <select
-            id="modoCreacion"
-            value={modoCreacion}
-            onChange={handleModoCreacionChange}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="normal">Programa Individual</option>
-            <option value="porDias">Múltiples Programas por Días</option>
-          </select>
-          {modoCreacion === 'porDias' && (
-            <p className="mt-1 text-xs text-gray-500">
-              En este modo se creará un programa independiente para cada día seleccionado
-            </p>
-          )}
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-green-700">{exito}</p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -372,9 +359,7 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            {modoCreacion === 'porDias' 
-              ? 'Días para Crear Programas*' 
-              : 'Días de Transmisión*'}
+            Días de Transmisión*
           </label>
           <div className="grid grid-cols-3 gap-2">
             {diasSemanaOpciones.map((dia) => (
@@ -392,9 +377,9 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
               </div>
             ))}
           </div>
-          {modoCreacion === 'porDias' && formData.diasSemana && formData.diasSemana.length > 0 && (
+          {formData.diasSemana && formData.diasSemana.length > 0 && (
             <p className="mt-1 text-sm text-gray-600">
-              Se crearán {formData.diasSemana.length} programas (uno por cada día)
+              {formData.diasSemana.length} día(s) seleccionado(s)
             </p>
           )}
         </div>
@@ -410,10 +395,10 @@ export default function ProgramaForm({ programa, onSubmit, isEditing = false }: 
         </button>
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !diasInicializados}
           className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
         >
-          {loading ? 'Guardando...' : isEditing ? 'Actualizar' : modoCreacion === 'porDias' ? 'Crear Programas' : 'Crear'}
+          {loading ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear Programa'}
         </button>
       </div>
     </form>

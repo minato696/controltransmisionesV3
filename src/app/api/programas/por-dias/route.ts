@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+interface DiaSemana {
+  id: number;
+  nombre: string;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -23,9 +28,10 @@ export async function POST(request: Request) {
     
     // Normalizar días (quitar acentos)
     const diasNormalizados = diasSemana.map((dia: string) => {
-      if (dia === 'MIÉRCOLES') return 'MIERCOLES';
-      if (dia === 'SÁBADO') return 'SABADO';
-      return dia;
+      const diaUpperCase = dia.toUpperCase();
+      if (diaUpperCase === 'MIÉRCOLES') return 'MIERCOLES';
+      if (diaUpperCase === 'SÁBADO') return 'SABADO';
+      return diaUpperCase;
     });
     
     console.log('Días normalizados:', diasNormalizados);
@@ -34,7 +40,40 @@ export async function POST(request: Request) {
     const todosDias = await prisma.diaSemana.findMany();
     console.log('Todos los días en la BD:', todosDias);
     
-    // Obtener IDs de días de la semana
+    // Si no hay días en la BD, intentar crearlos
+    if (todosDias.length === 0) {
+      console.log('No hay días en la BD, intentando crearlos...');
+      
+      const diasParaCrear = [
+        { nombre: 'LUNES' },
+        { nombre: 'MARTES' },
+        { nombre: 'MIERCOLES' },
+        { nombre: 'JUEVES' },
+        { nombre: 'VIERNES' },
+        { nombre: 'SABADO' },
+        { nombre: 'DOMINGO' }
+      ];
+      
+      for (const dia of diasParaCrear) {
+        await prisma.diaSemana.create({
+          data: dia
+        });
+      }
+      
+      console.log('Días creados automáticamente');
+      
+      // Volver a obtener los días
+      const diasCreados = await prisma.diaSemana.findMany();
+      console.log('Días después de creación automática:', diasCreados);
+      
+      if (diasCreados.length === 0) {
+        return NextResponse.json({ 
+          error: 'No se pudieron crear los días automáticamente. Ejecute el endpoint /api/seed primero.' 
+        }, { status: 500 });
+      }
+    }
+    
+    // Obtener IDs de días de la semana especificados
     const diasSemanaDb = await prisma.diaSemana.findMany({
       where: {
         nombre: {
@@ -50,63 +89,63 @@ export async function POST(request: Request) {
         error: 'No se encontraron los días especificados en la base de datos',
         diasEnviados: diasSemana,
         diasNormalizados: diasNormalizados,
-        todosDiasEnBD: todosDias.map((d: { nombre: string }) => d.nombre)
+        todosDiasEnBD: todosDias.map((d: { nombre: string }) => d.nombre),
+        recomendacion: 'Visite /api/seed para inicializar los datos de referencia'
       }, { status: 400 });
     }
     
-    // Crear un programa para cada día de la semana
-    const programasCreados = [];
+    // MODIFICADO: Crear un solo programa con múltiples días
+    console.log(`Creando programa: ${nombre} con ${diasSemanaDb.length} días`);
     
-    for (const dia of diasSemanaDb) {
-      const nombrePrograma = `${nombre} - ${dia.nombre}`;
-      
-      try {
-        // Crear el programa
-        const programa = await prisma.programa.create({
-          data: {
-            nombre: nombrePrograma,
-            descripcion: `Programa automático para ${dia.nombre}`,
-            horaInicio: horaInicio,
-            estado: isActivo ? 'activo' : 'inactivo',
-            fechaInicio: new Date(),
-            // Crear relación con este único día
-            diasSemana: {
-              create: [{
-                diaSemanaId: dia.id
-              }]
-            },
-            // Crear relaciones con todas las filiales seleccionadas
-            filiales: {
-              create: filialIds.map((filialId: number) => ({
-                filialId
-              }))
+    try {
+      // Crear el programa
+      const programa = await prisma.programa.create({
+        data: {
+          nombre: nombre,
+          descripcion: `Programa para ${diasSemanaDb.map((d: DiaSemana) => d.nombre).join(', ')}`,
+          horaInicio: horaInicio,
+          estado: isActivo ? 'activo' : 'inactivo',
+          fechaInicio: new Date(),
+          // Crear relaciones con todos los días
+          diasSemana: {
+            create: diasSemanaDb.map((dia: DiaSemana) => ({
+              diaSemanaId: dia.id
+            }))
+          },
+          // Crear relaciones con todas las filiales seleccionadas
+          filiales: {
+            create: filialIds.map((filialId: number) => ({
+              filialId
+            }))
+          }
+        },
+        include: {
+          diasSemana: {
+            include: {
+              diaSemana: true
             }
           },
-          include: {
-            diasSemana: {
-              include: {
-                diaSemana: true
-              }
-            },
-            filiales: {
-              include: {
-                filial: true
-              }
+          filiales: {
+            include: {
+              filial: true
             }
           }
-        });
-        
-        programasCreados.push(programa);
-        console.log(`Programa creado: ${nombrePrograma}`);
-      } catch (err) {
-        console.error(`Error al crear programa para ${dia.nombre}:`, err);
-      }
+        }
+      });
+      
+      console.log(`Programa creado: ${nombre} con ${programa.diasSemana.length} días y ${programa.filiales.length} filiales`);
+      
+      return NextResponse.json(programa);
+    } catch (err) {
+      console.error(`Error al crear programa ${nombre}:`, err);
+      throw err;
     }
-    
-    console.log(`Total programas creados: ${programasCreados.length}`);
-    return NextResponse.json(programasCreados);
   } catch (error) {
-    console.error('Error al crear programas por días:', error);
-    return NextResponse.json({ error: 'Error al crear programas por días' }, { status: 500 });
+    console.error('Error al crear programa:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ 
+      error: 'Error al crear programa',
+      details: errorMessage
+    }, { status: 500 });
   }
 }
