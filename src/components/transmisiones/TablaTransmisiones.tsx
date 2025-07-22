@@ -22,7 +22,7 @@ export default function TablaTransmisiones({
   getReporte,
   abrirFormulario
 }: TablaTransmisionesProps) {
-
+  
   // Renderizar indicador de estado
   const renderEstadoIndicador = (estado: string | null, reporte: Reporte | null) => {
     let bgColor = "bg-gray-200";
@@ -85,7 +85,8 @@ export default function TablaTransmisiones({
     );
   };
 
-  if (!filialSeleccionada || !programaSeleccionado) {
+  // Renderizar mensaje vacío
+  const renderMensajeVacio = () => {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center text-gray-500">
@@ -96,6 +97,10 @@ export default function TablaTransmisiones({
         </div>
       </div>
     );
+  };
+
+  if (!filialSeleccionada || !programaSeleccionado) {
+    return renderMensajeVacio();
   }
 
   return (
@@ -130,7 +135,7 @@ export default function TablaTransmisiones({
             }
             
             const reporte = getReporte(
-              filialSeleccionada!, 
+              filialSeleccionada, 
               programaSeleccionado,
               dia.fecha
             );
@@ -139,7 +144,7 @@ export default function TablaTransmisiones({
               <div key={idx} className="flex justify-center items-center">
                 <div 
                   onClick={() => abrirFormulario(
-                    filialSeleccionada!,
+                    filialSeleccionada,
                     programaSeleccionado,
                     dia.nombre,
                     dia.fecha
