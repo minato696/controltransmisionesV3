@@ -1,10 +1,10 @@
-// src/components/transmisiones/EnhancedTablaTransmisiones.tsx
+// src/components/transmisiones/FlexibleTablaTransmisiones.tsx
 import React from 'react';
 import { ESTADOS_TRANSMISION } from './constants';
 import { DiaSemana, Programa, Reporte } from './types';
-import EnhancedEstadoIndicador from './EnhancedEstadoIndicador';
+import FlexibleEstadoIndicador from './FlexibleEstadoIndicador';
 
-interface EnhancedTablaTransmisionesProps {
+interface FlexibleTablaTransmisionesProps {
   filialSeleccionada: number | null;
   programaSeleccionado: number | null;
   diasSemana: DiaSemana[];
@@ -14,7 +14,7 @@ interface EnhancedTablaTransmisionesProps {
   abrirFormulario: (filialId: number, programaId: number, dia: string, fecha: string) => void;
 }
 
-const EnhancedTablaTransmisiones: React.FC<EnhancedTablaTransmisionesProps> = ({
+const FlexibleTablaTransmisiones: React.FC<FlexibleTablaTransmisionesProps> = ({
   filialSeleccionada,
   programaSeleccionado,
   diasSemana,
@@ -80,7 +80,7 @@ const EnhancedTablaTransmisiones: React.FC<EnhancedTablaTransmisionesProps> = ({
             
             return (
               <div key={idx} className="flex justify-center items-center">
-                <EnhancedEstadoIndicador
+                <FlexibleEstadoIndicador
                   estado={reporte?.estado || ESTADOS_TRANSMISION.PENDIENTE}
                   reporte={reporte}
                   onClick={() => abrirFormulario(
@@ -99,4 +99,4 @@ const EnhancedTablaTransmisiones: React.FC<EnhancedTablaTransmisionesProps> = ({
   );
 };
 
-export default EnhancedTablaTransmisiones;
+export default FlexibleTablaTransmisiones;

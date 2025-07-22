@@ -17,7 +17,7 @@ import {
   getProgramasTransformados,
   getReportesPorFechas,
 } from '../../services/api-client';
-import TablaTransmisiones from './TablaTransmisiones';
+import FlexibleTablaTransmisiones from './FlexibleTablaTransmisiones';
 import FormularioReporte from './FormularioReporte';
 
 // Objeto global para rastrear reportes ya registrados y evitar duplicados
@@ -399,8 +399,8 @@ export default function ControlTransmisiones() {
             </div>
           )}
 
-          {/* Tabla de transmisiones */}
-          <TablaTransmisiones 
+          {/* Tabla de transmisiones con tooltip flexible */}
+          <FlexibleTablaTransmisiones 
             filialSeleccionada={filialSeleccionada}
             programaSeleccionado={programaSeleccionado}
             diasSemana={diasSemana}

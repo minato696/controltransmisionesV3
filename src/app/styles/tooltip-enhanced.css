@@ -1,0 +1,138 @@
+/* src/app/styles/tooltip-enhanced.css */
+
+/* Contenedor del tooltip - solo visible en hover */
+.tooltip-trigger {
+  position: relative;
+}
+
+.tooltip-enhanced {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  z-index: 50;
+  min-width: 200px;
+  max-width: 280px; /* Aumentado para dar más espacio */
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+/* Mostrar tooltip al hacer hover */
+.tooltip-trigger:hover .tooltip-enhanced {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Contenedor principal del tooltip */
+.tooltip-content {
+  background-color: #1f2937;
+  color: white;
+  border-radius: 6px;
+  padding: 12px; /* Aumentado el padding */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  font-size: 0.875rem;
+  text-align: left;
+  line-height: 1.4;
+  width: 100%; /* Asegurar que tome todo el ancho disponible */
+}
+
+/* Estilos para diferentes estados */
+.tooltip-si {
+  border-left: 4px solid #10b981;
+}
+
+.tooltip-no {
+  border-left: 4px solid #ef4444;
+}
+
+.tooltip-tarde {
+  border-left: 4px solid #f59e0b;
+}
+
+.tooltip-pendiente {
+  border-left: 4px solid #9ca3af;
+}
+
+/* Título del tooltip */
+.tooltip-title {
+  font-weight: bold;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+/* Filas de información */
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px; /* Más espacio entre filas */
+  align-items: flex-start; /* Alinear al inicio para manejar textos largos */
+}
+
+/* Etiquetas */
+.tooltip-label {
+  font-weight: 500;
+  color: #d1d5db;
+  margin-right: 12px; /* Más espacio entre label y valor */
+  min-width: 60px; /* Ancho mínimo para alinear etiquetas */
+  flex-shrink: 0; /* Evitar que se reduzca */
+}
+
+/* Valores - Estilo general */
+.tooltip-value {
+  text-align: right;
+  color: #ffffff;
+  flex-grow: 1; /* Tomar espacio disponible */
+  word-wrap: break-word; /* Cortar palabras largas */
+  word-break: break-word;
+  max-width: 65%; /* Limitar ancho para mantener espacio con etiqueta */
+}
+
+/* Estilo específico para motivo - siempre permitir múltiples líneas */
+.tooltip-motivo {
+  white-space: normal !important;
+  line-height: 1.3;
+  hyphens: auto; /* Permitir guiones en palabras largas */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Flecha del tooltip */
+.tooltip-arrow {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: #1f2937;
+  transform: rotate(45deg);
+  bottom: -6px;
+  left: 50%;
+  margin-left: -6px;
+}
+
+/* Estilo especial para tooltips de transmitió tarde */
+.tooltip-tarde .tooltip-content {
+  padding-bottom: 14px; /* Más espacio abajo */
+}
+
+/* Desplegar hacia abajo en pantallas pequeñas o cuando está cerca del borde superior */
+@media (max-height: 500px), (max-width: 640px) {
+  .tooltip-enhanced.deploy-down {
+    bottom: auto;
+    top: 100%;
+    margin-top: 8px;
+    margin-bottom: 0;
+  }
+  
+  .tooltip-enhanced.deploy-down .tooltip-arrow {
+    bottom: auto;
+    top: -6px;
+  }
+}
