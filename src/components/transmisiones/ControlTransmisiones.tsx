@@ -4,14 +4,10 @@
 import { useState, useEffect } from 'react';
 import { 
   DIAS_SEMANA, 
-  TARGETS_NO_TRANSMISION, 
-  TARGETS_RETRASO, 
-  ESTADOS_TRANSMISION,
   obtenerFechasSemana,
   normalizarDiaSemana
 } from './constants';
 import { 
-  EstadoTransmision, 
   TransmisionEditar, 
   DiaSemana, 
   Filial, 
@@ -22,10 +18,12 @@ import {
   getFilialesTransformadas,
   getProgramasTransformados,
   getReportesPorFechas,
-  guardarOActualizarReporte,
-  convertirFechaASwagger,
-  convertirFechaDesdeSwagger
+  guardarOActualizarReporte
 } from '../../services/api-client';
+
+// Importamos los componentes nuevos
+import TransmisionTooltip from './TransmisionTooltip';
+import ReporteForm from './ReporteForm';
 
 export default function ControlTransmisiones() {
   // Estados principales
@@ -41,13 +39,6 @@ export default function ControlTransmisiones() {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Estados para el formulario
-  const [estadoTransmision, setEstadoTransmision] = useState<string>(ESTADOS_TRANSMISION.PENDIENTE);
-  const [horaReal, setHoraReal] = useState('');
-  const [horaTT, setHoraTT] = useState('');
-  const [target, setTarget] = useState('');
-  const [motivoPersonalizado, setMotivoPersonalizado] = useState('');
   const [reporteActual, setReporteActual] = useState<Reporte | null>(null);
 
   // Cargar datos iniciales
@@ -194,6 +185,8 @@ export default function ControlTransmisiones() {
     
     if (!filial || !programa) return;
     
+    debug.log('Abriendo formulario con reporte:', reporte);
+    
     setTransmisionEditar({
       filialId,
       programaId,
@@ -205,44 +198,55 @@ export default function ControlTransmisiones() {
       reporteId: reporte?.id_reporte
     });
     
-    // Configurar estado inicial del formulario
+    // Configurar estado inicial del formulario con más detalle para debugging
     if (reporte) {
-      setReporteActual(reporte);
-      setEstadoTransmision(reporte.estado || ESTADOS_TRANSMISION.PENDIENTE);
-      setHoraReal(reporte.horaReal || reporte.hora || programa.horario || '');
-      setHoraTT(reporte.hora_tt || '');
-      setTarget(reporte.target || '');
-      setMotivoPersonalizado(reporte.motivo || '');
-    } else {
-      setReporteActual(null);
-      setEstadoTransmision(ESTADOS_TRANSMISION.PENDIENTE);
-      setHoraReal(programa.horario || programa.horaInicio || '');
-      setHoraTT('');
-      setTarget('');
-      setMotivoPersonalizado('');
+      debug.log('Inicializando formulario con reporte existente:', {
+        estado: reporte.estado,
+        hora: reporte.hora,
+        horaReal: reporte.horaReal,
+        hora_tt: reporte.hora_tt,
+        target: reporte.target,
+        motivo: reporte.motivo
+      });
+      
+      // Preprocesamiento especial para reportes con motivo personalizado
+      if (reporte.motivo && !reporte.target) {
+        // Si hay un motivo pero no target, establecer target como "Otros"
+        debug.log('Preprocesando reporte con motivo pero sin target');
+        reporte.target = 'Otros';
+      }
     }
     
+    setReporteActual(reporte);
     setMostrarFormulario(true);
   };
 
   // Guardar formulario
-  const guardarFormulario = async () => {
+  const guardarFormulario = async (datosForm: {
+    estadoTransmision: string;
+    horaReal: string;
+    horaTT: string;
+    target: string;
+    motivoPersonalizado: string;
+  }) => {
     if (!transmisionEditar) return;
     
     try {
       setGuardando(true);
       setError(null);
       
+      debug.log('Procesando datos de formulario:', datosForm);
+      
       // Preparar datos del reporte
       const datosReporte: any = {
         filialId: transmisionEditar.filialId,
         programaId: transmisionEditar.programaId,
         fecha: transmisionEditar.fecha,
-        estadoTransmision: estadoTransmision === ESTADOS_TRANSMISION.SI_TRANSMITIO ? 'Si' :
-                          estadoTransmision === ESTADOS_TRANSMISION.NO_TRANSMITIO ? 'No' :
-                          estadoTransmision === ESTADOS_TRANSMISION.TRANSMITIO_TARDE ? 'Tarde' : 
+        estadoTransmision: datosForm.estadoTransmision === 'si' ? 'Si' :
+                          datosForm.estadoTransmision === 'no' ? 'No' :
+                          datosForm.estadoTransmision === 'tarde' ? 'Tarde' : 
                           'Pendiente',
-        estado: estadoTransmision
+        estado: datosForm.estadoTransmision
       };
       
       // Agregar ID si es actualización
@@ -251,23 +255,66 @@ export default function ControlTransmisiones() {
       }
       
       // Configurar datos según el estado
-      if (estadoTransmision === ESTADOS_TRANSMISION.SI_TRANSMITIO) {
-        datosReporte.hora = horaReal;
-        datosReporte.horaReal = horaReal;
-      } else if (estadoTransmision === ESTADOS_TRANSMISION.NO_TRANSMITIO) {
-        datosReporte.target = target;
-        if (target === 'Otros') {
-          datosReporte.motivo = motivoPersonalizado;
+      if (datosForm.estadoTransmision === 'si') {
+        // Transmitió a tiempo
+        datosReporte.hora = datosForm.horaReal;
+        datosReporte.horaReal = datosForm.horaReal;
+        datosReporte.target = null;
+        datosReporte.motivo = null;
+        datosReporte.hora_tt = null;
+      } else if (datosForm.estadoTransmision === 'no') {
+        // No transmitió
+        datosReporte.hora = datosForm.horaReal;
+        datosReporte.horaReal = datosForm.horaReal;
+        datosReporte.hora_tt = null;
+        
+        if (datosForm.target === 'Otros') {
+          // Si seleccionó "Otros", guardar tanto el target como el motivo
+          datosReporte.target = 'Otros';
+          datosReporte.motivo = datosForm.motivoPersonalizado || 'Sin especificar';
+        } else if (datosForm.target) {
+          // Si seleccionó un target estándar, guardar solo el target
+          datosReporte.target = datosForm.target;
+          datosReporte.motivo = null;
+        } else {
+          // Si no seleccionó target, dejar valores nulos
+          datosReporte.target = null;
+          datosReporte.motivo = null;
         }
-      } else if (estadoTransmision === ESTADOS_TRANSMISION.TRANSMITIO_TARDE) {
-        datosReporte.hora = horaReal;
-        datosReporte.horaReal = horaReal;
-        datosReporte.hora_tt = horaTT;
-        datosReporte.target = target;
-        if (target === 'Otros') {
-          datosReporte.motivo = motivoPersonalizado;
+      } else if (datosForm.estadoTransmision === 'tarde') {
+        // Transmitió tarde
+        datosReporte.hora = datosForm.horaReal;
+        datosReporte.horaReal = datosForm.horaReal;
+        datosReporte.hora_tt = datosForm.horaTT;
+        
+        if (datosForm.target === 'Otros') {
+          // Si seleccionó "Otros", guardar tanto el target como el motivo
+          datosReporte.target = 'Otros';
+          datosReporte.motivo = datosForm.motivoPersonalizado || 'Sin especificar';
+        } else if (datosForm.target) {
+          // Si seleccionó un target estándar, guardar solo el target
+          datosReporte.target = datosForm.target;
+          datosReporte.motivo = null;
+        } else {
+          // Si no seleccionó target, podemos mantener el motivo anterior si existe
+          if (reporteActual?.motivo) {
+            datosReporte.target = 'Otros';
+            datosReporte.motivo = reporteActual.motivo;
+          } else {
+            datosReporte.target = null;
+            datosReporte.motivo = null;
+          }
         }
+      } else {
+        // Estado pendiente, limpiar todos los campos
+        datosReporte.hora = null;
+        datosReporte.horaReal = null;
+        datosReporte.hora_tt = null;
+        datosReporte.target = null;
+        datosReporte.motivo = null;
       }
+      
+      debug.log('Enviando datos al servidor:', datosReporte);
       
       // Guardar en la API
       await guardarOActualizarReporte(
@@ -311,68 +358,6 @@ export default function ControlTransmisiones() {
       const diaProgramaNormalizado = normalizarDiaSemana(d);
       return diaProgramaNormalizado === diaNormalizado;
     });
-  };
-
-  // Renderizar indicador de estado
-  const renderEstadoIndicador = (estado: string | null, reporte: Reporte | null) => {
-    let bgColor = "bg-gray-200";
-    let icon = "⏱";
-    let iconColor = "text-white";
-    let showIcon = true;
-    
-    const estadoNormalizado = estado || ESTADOS_TRANSMISION.PENDIENTE;
-    
-    switch (estadoNormalizado) {
-      case ESTADOS_TRANSMISION.SI_TRANSMITIO:
-        bgColor = "bg-emerald-500";
-        icon = "✓";
-        break;
-      case ESTADOS_TRANSMISION.NO_TRANSMITIO:
-        bgColor = "bg-red-500";
-        icon = "✕";
-        break;
-      case ESTADOS_TRANSMISION.TRANSMITIO_TARDE:
-        bgColor = "bg-amber-500";
-        showIcon = false;
-        break;
-    }
-    
-    return (
-      <div className={`${bgColor} w-16 h-16 rounded-lg shadow-md flex items-center justify-center cursor-pointer relative group transition-all duration-300 hover:shadow-lg`}>
-        {showIcon && <span className={`${iconColor} text-2xl`}>{icon}</span>}
-        
-        {/* Tooltip */}
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none">
-          <div className="p-2">
-            {estadoNormalizado === ESTADOS_TRANSMISION.SI_TRANSMITIO && (
-              <>
-                <div className="font-bold">Sí transmitió</div>
-                <div>Hora: {reporte?.horaReal || reporte?.hora || '-'}</div>
-              </>
-            )}
-            {estadoNormalizado === ESTADOS_TRANSMISION.NO_TRANSMITIO && (
-              <>
-                <div className="font-bold">No transmitió</div>
-                <div>Motivo: {reporte?.target || '-'}</div>
-                {reporte?.motivo && <div>Detalle: {reporte.motivo}</div>}
-              </>
-            )}
-            {estadoNormalizado === ESTADOS_TRANSMISION.TRANSMITIO_TARDE && (
-              <>
-                <div className="font-bold">Transmitió tarde</div>
-                <div>Hora programada: {reporte?.horaReal || reporte?.hora || '-'}</div>
-                <div>Hora real: {reporte?.hora_tt || '-'}</div>
-                {reporte?.motivo && <div>Motivo: {reporte.motivo}</div>}
-              </>
-            )}
-            {estadoNormalizado === ESTADOS_TRANSMISION.PENDIENTE && (
-              <div className="font-bold">Pendiente</div>
-            )}
-          </div>
-          <div className="w-3 h-3 bg-gray-800 transform rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2"></div>
-        </div>
-      </div>
-    );
   };
 
   // Renderizar estado de carga
@@ -537,16 +522,16 @@ export default function ControlTransmisiones() {
                     
                     return (
                       <div key={idx} className="flex justify-center items-center">
-                        <div 
+                        <TransmisionTooltip 
+                          estado={reporte?.estado || null}
+                          reporte={reporte}
                           onClick={() => abrirFormulario(
                             filialSeleccionada!,
                             programaSeleccionado,
                             dia.nombre,
                             dia.fecha
                           )}
-                        >
-                          {renderEstadoIndicador(reporte?.estado || null, reporte)}
-                        </div>
+                        />
                       </div>
                     );
                   })}
@@ -566,179 +551,16 @@ export default function ControlTransmisiones() {
         </div>
       </div>
 
-      {/* Modal para actualizar el estado con fondo gaussiano (blur) */}
-      {mostrarFormulario && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-black/30">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-96 max-w-full mx-4 animate-fade-in-up">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">
-                {reporteActual ? 'Actualizar' : 'Nuevo'} Reporte
-              </h2>
-              <button 
-                onClick={() => setMostrarFormulario(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                disabled={guardando}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="space-y-5">
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-sm text-gray-700"><span className="font-medium">Filial:</span> {transmisionEditar?.filial}</div>
-                <div className="text-sm text-gray-700"><span className="font-medium">Programa:</span> {transmisionEditar?.programa}</div>
-                <div className="text-sm text-gray-700"><span className="font-medium">Día:</span> {transmisionEditar?.dia}</div>
-                <div className="text-sm text-gray-700"><span className="font-medium">Fecha:</span> {transmisionEditar?.fecha}</div>
-                <div className="text-sm text-gray-700"><span className="font-medium">Hora programada:</span> {transmisionEditar?.hora}</div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Estado de transmisión</label>
-                <select 
-                  className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                  value={estadoTransmision}
-                  onChange={(e) => setEstadoTransmision(e.target.value)}
-                  disabled={guardando}
-                >
-                  <option value={ESTADOS_TRANSMISION.PENDIENTE}>Pendiente</option>
-                  <option value={ESTADOS_TRANSMISION.SI_TRANSMITIO}>Sí transmitió</option>
-                  <option value={ESTADOS_TRANSMISION.NO_TRANSMITIO}>No transmitió</option>
-                  <option value={ESTADOS_TRANSMISION.TRANSMITIO_TARDE}>Transmitió tarde</option>
-                </select>
-              </div>
-              
-              {estadoTransmision === ESTADOS_TRANSMISION.SI_TRANSMITIO && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Hora real de transmisión</label>
-                  <input 
-                    type="time" 
-                    className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                    value={horaReal}
-                    onChange={(e) => setHoraReal(e.target.value)}
-                    disabled={guardando}
-                  />
-                </div>
-              )}
-              
-              {estadoTransmision === ESTADOS_TRANSMISION.NO_TRANSMITIO && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
-                  <select 
-                    className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                    value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    disabled={guardando}
-                  >
-                    <option value="">Seleccione un motivo</option>
-                    {TARGETS_NO_TRANSMISION.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </select>
-                  
-                  {target === 'Otros' && (
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Especifique el motivo</label>
-                      <input 
-                        type="text" 
-                        className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                        value={motivoPersonalizado}
-                        onChange={(e) => setMotivoPersonalizado(e.target.value)}
-                        placeholder="Ingrese el motivo..."
-                        disabled={guardando}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {estadoTransmision === ESTADOS_TRANSMISION.TRANSMITIO_TARDE && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hora programada</label>
-                    <input 
-                      type="time" 
-                      className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                      value={horaReal}
-                      onChange={(e) => setHoraReal(e.target.value)}
-                      disabled={guardando}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hora real de transmisión</label>
-                    <input 
-                      type="time" 
-                      className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                      value={horaTT}
-                      onChange={(e) => setHoraTT(e.target.value)}
-                      placeholder="HH:MM"
-                      disabled={guardando}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del retraso</label>
-                    <select 
-                      className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                      value={target}
-                      onChange={(e) => setTarget(e.target.value)}
-                      disabled={guardando}
-                    >
-                      <option value="">Seleccione un motivo</option>
-                      {TARGETS_RETRASO.map((t) => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                    </select>
-                    
-                    {target === 'Otros' && (
-                      <div className="mt-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Especifique el motivo</label>
-                        <input 
-                          type="text" 
-                          className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                          value={motivoPersonalizado}
-                          onChange={(e) => setMotivoPersonalizado(e.target.value)}
-                          placeholder="Ingrese el motivo..."
-                          disabled={guardando}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-8">
-              <button 
-                className="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700 transition-colors disabled:opacity-50"
-                onClick={() => setMostrarFormulario(false)}
-                disabled={guardando}
-              >
-                Cancelar
-              </button>
-              <button 
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center"
-                onClick={guardarFormulario}
-                disabled={guardando}
-              >
-                {guardando ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Guardando...
-                  </>
-                ) : (
-                  'Guardar'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Formulario de Reporte (Modal) */}
+      <ReporteForm 
+        mostrar={mostrarFormulario}
+        transmisionEditar={transmisionEditar}
+        reporteActual={reporteActual}
+        onClose={() => setMostrarFormulario(false)}
+        onGuardar={guardarFormulario}
+        guardando={guardando}
+        error={error}
+      />
     </div>
   );
 }

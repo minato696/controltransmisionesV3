@@ -1,0 +1,8 @@
+2025-07-13 19:58:44 - Sistema de monitoreo iniciado
+2025-07-13 20:01:10 - Sistema de monitoreo iniciado
+2025-07-13 20:05:04 - Sistema de monitoreo iniciado
+2025-07-13 20:06:08 - Sistema de monitoreo iniciado
+2025-07-13 21:39:09 - El proceso reproductorex fue cerrado
+2025-07-13 21:39:09 - Proceso reproductorex reiniciado automáticamente
+2025-07-14 09:30:57 - El proceso reproductork fue cerrado
+2025-07-14 09:30:57 - Proceso reproductork reiniciado automáticamente

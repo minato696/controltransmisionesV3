@@ -1,0 +1,3 @@
+2025-07-20 07:45:07 - Sistema de monitoreo iniciado
+2025-07-20 12:28:17 - El proceso reproductork fue cerrado
+2025-07-20 12:28:17 - Proceso reproductork reiniciado automáticamente
