@@ -12,6 +12,19 @@ export const DIAS_SEMANA: DiaSemana[] = [
   { nombre: "Sábado", fecha: "" }
 ];
 
+// Mapeo de días con y sin acentos para normalización
+export const DIAS_NORMALIZADOS: Record<string, string> = {
+  "LUNES": "LUNES",
+  "MARTES": "MARTES",
+  "MIÉRCOLES": "MIERCOLES",
+  "MIERCOLES": "MIERCOLES",
+  "JUEVES": "JUEVES",
+  "VIERNES": "VIERNES",
+  "SÁBADO": "SABADO",
+  "SABADO": "SABADO",
+  "DOMINGO": "DOMINGO"
+};
+
 // Targets para "No transmitió"
 export const TARGETS_NO_TRANSMISION = [
   { value: 'Fta', label: 'Falta (Fta)' },
@@ -55,7 +68,13 @@ export const obtenerFechasSemana = (): DiaSemana[] => {
     
     return {
       ...dia,
-      fecha: `${dd}/${mm}/${yyyy}`
+      fecha: `${yyyy}-${mm}-${dd}` // Formato YYYY-MM-DD para compatibilidad con la API
     };
   });
+};
+
+// Función para normalizar nombres de días (quitar acentos)
+export const normalizarDiaSemana = (dia: string): string => {
+  const diaUpperCase = dia.toUpperCase();
+  return DIAS_NORMALIZADOS[diaUpperCase] || diaUpperCase;
 };

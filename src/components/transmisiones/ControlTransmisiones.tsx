@@ -2,12 +2,15 @@
 
 // src/components/transmisiones/ControlTransmisiones.tsx
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   DIAS_SEMANA, 
   TARGETS_NO_TRANSMISION, 
   TARGETS_RETRASO, 
   ESTADOS_TRANSMISION,
-  obtenerFechasSemana
+  obtenerFechasSemana,
+  normalizarDiaSemana
 } from './constants';
 import { 
   EstadoTransmision, 
@@ -35,19 +38,10 @@ export default function ControlTransmisiones() {
   const [programaSeleccionado, setProgramaSeleccionado] = useState<number | null>(null);
   const [vistaActual, setVistaActual] = useState<'semana' | 'dia'>('semana');
   const [diasSemana, setDiasSemana] = useState<DiaSemana[]>([]);
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [transmisionEditar, setTransmisionEditar] = useState<TransmisionEditar | null>(null);
   const [cargando, setCargando] = useState(true);
-  const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Estados para el formulario
-  const [estadoTransmision, setEstadoTransmision] = useState<string>(ESTADOS_TRANSMISION.PENDIENTE);
-  const [horaReal, setHoraReal] = useState('');
-  const [horaTT, setHoraTT] = useState('');
-  const [target, setTarget] = useState('');
-  const [motivoPersonalizado, setMotivoPersonalizado] = useState('');
-  const [reporteActual, setReporteActual] = useState<Reporte | null>(null);
+  const router = useRouter();
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -57,18 +51,7 @@ export default function ControlTransmisiones() {
   // Actualizar días de la semana
   useEffect(() => {
     const fechasSemana = obtenerFechasSemana();
-    // Convertir fechas al formato YYYY-MM-DD
-    const fechasFormateadas = fechasSemana.map(dia => {
-      if (dia.fecha.includes('/')) {
-        const [dd, mm, yyyy] = dia.fecha.split('/');
-        return {
-          ...dia,
-          fecha: `${yyyy}-${mm}-${dd}`
-        };
-      }
-      return dia;
-    });
-    setDiasSemana(fechasFormateadas);
+    setDiasSemana(fechasSemana);
   }, []);
 
   // Cargar reportes cuando cambie la selección
@@ -98,7 +81,10 @@ export default function ControlTransmisiones() {
       const programasConvertidos: Programa[] = programasData.map(p => ({
         ...p,
         horario: p.horario || p.horaInicio || '00:00',
-        diasSemana: p.diasSemana || ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES'],
+        // Normalizar los diasSemana para asegurarnos de que estén en formato consistente
+        diasSemana: (p.diasSemana || ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES']).map(
+          d => normalizarDiaSemana(d)
+        ),
         isActivo: p.isActivo ?? (p.estado === 'activo')
       }));
       
@@ -193,131 +179,26 @@ export default function ControlTransmisiones() {
     ) || null;
   };
 
-  // Abrir formulario
+  // Abrir formulario (redirección a página separada)
   const abrirFormulario = (filialId: number, programaId: number, dia: string, fecha: string) => {
-    const filial = filiales.find(f => Number(f.id) === filialId);
-    const programa = programas.find(p => Number(p.id) === programaId);
-    const reporte = getReporte(filialId, programaId, fecha);
-    
-    if (!filial || !programa) return;
-    
-    setTransmisionEditar({
-      filialId,
-      programaId,
-      filial: filial.nombre,
-      programa: programa.nombre,
-      hora: programa.horario || programa.horaInicio || '',
-      dia,
-      fecha,
-      reporteId: reporte?.id_reporte
-    });
-    
-    // Configurar estado inicial del formulario
-    if (reporte) {
-      setReporteActual(reporte);
-      setEstadoTransmision(reporte.estado || ESTADOS_TRANSMISION.PENDIENTE);
-      setHoraReal(reporte.horaReal || reporte.hora || programa.horario || '');
-      setHoraTT(reporte.hora_tt || '');
-      setTarget(reporte.target || '');
-      setMotivoPersonalizado(reporte.motivo || '');
-    } else {
-      setReporteActual(null);
-      setEstadoTransmision(ESTADOS_TRANSMISION.PENDIENTE);
-      setHoraReal(programa.horario || programa.horaInicio || '');
-      setHoraTT('');
-      setTarget('');
-      setMotivoPersonalizado('');
-    }
-    
-    setMostrarFormulario(true);
-  };
-
-  // Guardar formulario
-  const guardarFormulario = async () => {
-    if (!transmisionEditar) return;
-    
-    try {
-      setGuardando(true);
-      setError(null);
-      
-      // Preparar datos del reporte
-      const datosReporte: any = {
-        filialId: transmisionEditar.filialId,
-        programaId: transmisionEditar.programaId,
-        fecha: transmisionEditar.fecha,
-        estadoTransmision: estadoTransmision === ESTADOS_TRANSMISION.SI_TRANSMITIO ? 'Si' :
-                          estadoTransmision === ESTADOS_TRANSMISION.NO_TRANSMITIO ? 'No' :
-                          estadoTransmision === ESTADOS_TRANSMISION.TRANSMITIO_TARDE ? 'Tarde' : 
-                          'Pendiente',
-        estado: estadoTransmision
-      };
-      
-      // Agregar ID si es actualización
-      if (reporteActual?.id_reporte) {
-        datosReporte.id_reporte = reporteActual.id_reporte;
-      }
-      
-      // Configurar datos según el estado
-      if (estadoTransmision === ESTADOS_TRANSMISION.SI_TRANSMITIO) {
-        datosReporte.hora = horaReal;
-        datosReporte.horaReal = horaReal;
-      } else if (estadoTransmision === ESTADOS_TRANSMISION.NO_TRANSMITIO) {
-        datosReporte.target = target;
-        if (target === 'Otros') {
-          datosReporte.motivo = motivoPersonalizado;
-        }
-      } else if (estadoTransmision === ESTADOS_TRANSMISION.TRANSMITIO_TARDE) {
-        datosReporte.hora = horaReal;
-        datosReporte.horaReal = horaReal;
-        datosReporte.hora_tt = horaTT;
-        datosReporte.target = target;
-        if (target === 'Otros') {
-          datosReporte.motivo = motivoPersonalizado;
-        }
-      }
-      
-      console.log('Datos a enviar:', datosReporte);
-      
-      // Guardar en la API
-      await guardarOActualizarReporte(
-        transmisionEditar.filialId,
-        transmisionEditar.programaId,
-        transmisionEditar.fecha,
-        datosReporte
-      );
-      
-      console.log('Reporte guardado exitosamente');
-      
-      // Recargar reportes
-      await cargarReportes();
-      
-      setMostrarFormulario(false);
-    } catch (err: any) {
-      console.error('Error al guardar:', err);
-      
-      // Mostrar mensaje de error detallado
-      if (err.response && err.response.data && err.response.data.error) {
-        setError(`Error: ${err.response.data.error}`);
-      } else if (err.message) {
-        setError(`Error al guardar: ${err.message}`);
-      } else {
-        setError('Error al guardar el reporte. Por favor, intente nuevamente.');
-      }
-    } finally {
-      setGuardando(false);
-    }
+    // En lugar de mostrar un modal, redirigir a la página de reportes
+    router.push(`/reportes/${filialId}/${programaId}/${fecha}`);
   };
 
   // Verificar si un programa se transmite en un día
-  const programaTransmiteEnDia = (programa: Programa, dia: string): boolean => {
-    // Normalizar nombre del día
-    const diaNormalizado = dia.toUpperCase();
+  const programaTransmiteEnDia = (programa: Programa, diaNombre: string): boolean => {
+    if (!programa.diasSemana || programa.diasSemana.length === 0) {
+      return false;
+    }
+    
+    // Normalizar el nombre del día para la comparación
+    const diaNormalizado = normalizarDiaSemana(diaNombre);
     
     // Comprobar si el programa tiene este día en su lista de diasSemana
-    return programa.diasSemana?.some(d => 
-      d.toUpperCase() === diaNormalizado || 
-      d.toUpperCase().startsWith(diaNormalizado.substring(0, 3))
-    ) || false;
+    return programa.diasSemana.some(d => {
+      const diaProgramaNormalizado = normalizarDiaSemana(d);
+      return diaProgramaNormalizado === diaNormalizado;
+    });
   };
 
   // Renderizar indicador de estado
@@ -396,8 +277,8 @@ export default function ControlTransmisiones() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans">
-      {/* Barra superior */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 flex items-center shadow-md">
+      {/* Barra superior con opción de reportes semanales */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 flex items-center justify-between shadow-md">
         <div className="flex items-center text-lg font-semibold">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -407,6 +288,15 @@ export default function ControlTransmisiones() {
               ? programas.find(p => Number(p.id) === programaSeleccionado)?.nombre 
               : "Sistema de Control de Transmisiones"}
           </span>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <Link 
+            href="/reportes/semanales" 
+            className="px-4 py-1.5 bg-white text-blue-700 rounded-md font-medium hover:bg-blue-50 transition-colors shadow-sm text-sm"
+          >
+            Reportes Semanales
+          </Link>
         </div>
       </div>
 
@@ -572,180 +462,6 @@ export default function ControlTransmisiones() {
           </div>
         </div>
       </div>
-
-      {/* Modal para actualizar el estado */}
-      {mostrarFormulario && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-96 max-w-full mx-4">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">
-                {reporteActual ? 'Actualizar' : 'Nuevo'} Reporte
-              </h2>
-              <button 
-                onClick={() => setMostrarFormulario(false)}
-                className="text-gray-400 hover:text-gray-600"
-                disabled={guardando}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="space-y-5">
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-sm text-gray-700"><span className="font-medium">Filial:</span> {transmisionEditar?.filial}</div>
-                <div className="text-sm text-gray-700"><span className="font-medium">Programa:</span> {transmisionEditar?.programa}</div>
-                <div className="text-sm text-gray-700"><span className="font-medium">Día:</span> {transmisionEditar?.dia}</div>
-                <div className="text-sm text-gray-700"><span className="font-medium">Fecha:</span> {transmisionEditar?.fecha}</div>
-                <div className="text-sm text-gray-700"><span className="font-medium">Hora programada:</span> {transmisionEditar?.hora}</div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Estado de transmisión</label>
-                <select 
-                  className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                  value={estadoTransmision}
-                  onChange={(e) => setEstadoTransmision(e.target.value)}
-                  disabled={guardando}
-                >
-                  <option value={ESTADOS_TRANSMISION.PENDIENTE}>Pendiente</option>
-                  <option value={ESTADOS_TRANSMISION.SI_TRANSMITIO}>Sí transmitió</option>
-                  <option value={ESTADOS_TRANSMISION.NO_TRANSMITIO}>No transmitió</option>
-                  <option value={ESTADOS_TRANSMISION.TRANSMITIO_TARDE}>Transmitió tarde</option>
-                </select>
-              </div>
-              
-              {estadoTransmision === ESTADOS_TRANSMISION.SI_TRANSMITIO && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Hora real de transmisión</label>
-                  <input 
-                    type="time" 
-                    className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                    value={horaReal}
-                    onChange={(e) => setHoraReal(e.target.value)}
-                    disabled={guardando}
-                  />
-                </div>
-              )}
-              
-              {estadoTransmision === ESTADOS_TRANSMISION.NO_TRANSMITIO && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
-                  <select 
-                    className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                    value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    disabled={guardando}
-                  >
-                    <option value="">Seleccione un motivo</option>
-                    {TARGETS_NO_TRANSMISION.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </select>
-                  
-                  {target === 'Otros' && (
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Especifique el motivo</label>
-                      <input 
-                        type="text" 
-                        className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                        value={motivoPersonalizado}
-                        onChange={(e) => setMotivoPersonalizado(e.target.value)}
-                        placeholder="Ingrese el motivo..."
-                        disabled={guardando}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {estadoTransmision === ESTADOS_TRANSMISION.TRANSMITIO_TARDE && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hora programada</label>
-                    <input 
-                      type="time" 
-                      className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                      value={horaReal}
-                      onChange={(e) => setHoraReal(e.target.value)}
-                      disabled={guardando}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hora real de transmisión</label>
-                    <input 
-                      type="time" 
-                      className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                      value={horaTT}
-                      onChange={(e) => setHoraTT(e.target.value)}
-                      placeholder="HH:MM"
-                      disabled={guardando}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del retraso</label>
-                    <select 
-                      className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                      value={target}
-                      onChange={(e) => setTarget(e.target.value)}
-                      disabled={guardando}
-                    >
-                      <option value="">Seleccione un motivo</option>
-                      {TARGETS_RETRASO.map((t) => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                    </select>
-                    
-                    {target === 'Otros' && (
-                      <div className="mt-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Especifique el motivo</label>
-                        <input 
-                          type="text" 
-                          className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                          value={motivoPersonalizado}
-                          onChange={(e) => setMotivoPersonalizado(e.target.value)}
-                          placeholder="Ingrese el motivo..."
-                          disabled={guardando}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-8">
-              <button 
-                className="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700 transition-colors disabled:opacity-50"
-                onClick={() => setMostrarFormulario(false)}
-                disabled={guardando}
-              >
-                Cancelar
-              </button>
-              <button 
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center"
-                onClick={guardarFormulario}
-                disabled={guardando}
-              >
-                {guardando ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Guardando...
-                  </>
-                ) : (
-                  'Guardar'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
