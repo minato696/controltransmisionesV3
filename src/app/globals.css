@@ -24,3 +24,62 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* Estilos para los tooltips principales que aparecen encima de los cuadrados */
+[class*="Motivo"] {
+  background-color: #1F2937 !important;
+  color: white !important;
+  border-radius: 4px !important;
+  padding: 8px 10px !important;
+  font-size: 0.75rem !important;
+  max-width: 220px !important;
+  text-align: left !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Variantes según el estado */
+[class*="NO TRANSMITIO"] {
+  border-left: 3px solid #ef4444 !important;
+}
+
+[class*="transmitio-tarde"], 
+[class*="Transmitió tarde"] {
+  border-left: 3px solid #f59e0b !important;
+}
+
+/* Estructura interior de los tooltips */
+[class*="Motivo"] > div {
+  display: flex !important;
+  justify-content: space-between !important;
+  margin-bottom: 3px !important;
+}
+
+/* Etiquetas dentro del tooltip */
+[class*="Motivo:"] {
+  font-weight: 500 !important;
+  color: #d1d5db !important;
+  margin-right: 8px !important;
+}
+
+/* Título del tooltip */
+[class*="NO TRANSMITIO"],
+[class*="transmitio-tarde"] {
+  font-weight: bold !important;
+  font-size: 0.8rem !important;
+  text-transform: uppercase !important;
+  text-align: center !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+  padding-bottom: 4px !important;
+  margin-bottom: 6px !important;
+}
+
+/* Flecha del tooltip */
+[class*="Motivo"]::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 100% !important;
+  left: 50% !important;
+  margin-left: -6px !important;
+  border-width: 6px !important;
+  border-style: solid !important;
+  border-color: #1F2937 transparent transparent transparent !important;
+}

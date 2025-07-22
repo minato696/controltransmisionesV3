@@ -65,6 +65,7 @@ export async function PUT(
     }
     
     const reporteData = await request.json();
+    console.log('Datos recibidos para actualizar reporte:', reporteData);
     
     // Verificar si el reporte existe
     const reporteExistente = await prisma.reporte.findUnique({
@@ -107,7 +108,7 @@ export async function PUT(
     }
     
     // Buscar el target si existe
-    let targetId: number | undefined;
+    let targetId: number | null = null;
     
     if (target) {
       const targetDB = await prisma.target.findFirst({
@@ -123,11 +124,34 @@ export async function PUT(
     const updateData: any = {};
     
     if (estadoId) updateData.estadoId = estadoId;
-    if (targetId !== undefined) updateData.targetId = targetId || null;
-    if (motivo !== undefined) updateData.motivo = motivo || null;
+    
+    // Manejo mejorado del target y motivo
+    if (target === 'Otros' && motivo) {
+      // Si el target es "Otros", guardar el target y el motivo personalizado
+      updateData.targetId = targetId;
+      updateData.motivo = motivo;
+    } else if (target && target !== 'Otros') {
+      // Si hay un target específico (no es "Otros"), guardar el target y eliminar cualquier motivo
+      updateData.targetId = targetId;
+      updateData.motivo = null; // Limpiamos el motivo ya que no es necesario
+    } else if (!target && motivo) {
+      // Si no hay target pero hay motivo, guardamos solo el motivo
+      updateData.targetId = null;
+      updateData.motivo = motivo;
+    } else {
+      // En cualquier otro caso, usar los valores proporcionados
+      updateData.targetId = targetId;
+      if (motivo !== undefined) {
+        updateData.motivo = motivo || null;
+      }
+    }
+    
+    // Otros campos
     if (hora !== undefined || horaReal !== undefined) updateData.hora = horaReal || hora || null;
     if (hora_tt !== undefined) updateData.horaTt = hora_tt || null;
     if (observaciones !== undefined) updateData.observaciones = observaciones || null;
+    
+    console.log('Datos a actualizar:', updateData);
     
     // Actualizar reporte
     const reporte = await prisma.reporte.update({
@@ -140,6 +164,8 @@ export async function PUT(
         target: true
       }
     });
+    
+    console.log('Reporte actualizado:', reporte);
     
     // Transformar para respuesta
     const reporteTransformado = {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ESTADOS_TRANSMISION, 
   TARGETS_NO_TRANSMISION, 
@@ -33,6 +33,19 @@ export default function FormularioReporte({
   const [motivoPersonalizado, setMotivoPersonalizado] = useState(reporteActual?.motivo || '');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Efecto para inicializar el motivo personalizado
+  useEffect(() => {
+    // Si hay un target 'Otros' y un motivo, establecer el motivoPersonalizado
+    if (reporteActual?.target === 'Otros' && reporteActual?.motivo) {
+      setMotivoPersonalizado(reporteActual.motivo);
+    }
+    // Si hay un motivo pero no hay target o es diferente de 'Otros', podría ser un target personalizado
+    else if (reporteActual?.motivo && (!reporteActual?.target || reporteActual?.target !== 'Otros')) {
+      setTarget('Otros');
+      setMotivoPersonalizado(reporteActual.motivo);
+    }
+  }, [reporteActual]);
 
   // Guardar formulario
   const guardarFormulario = async () => {

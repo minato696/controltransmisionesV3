@@ -2,6 +2,8 @@
 
 import { ESTADOS_TRANSMISION } from './constants';
 import { DiaSemana, Programa, Reporte } from './types';
+import CompactTooltip from './CompactTooltip';
+import '../../app/styles/tooltip-compact.css';
 
 interface TablaTransmisionesProps {
   filialSeleccionada: number | null;
@@ -23,7 +25,7 @@ export default function TablaTransmisiones({
   abrirFormulario
 }: TablaTransmisionesProps) {
   
-  // Renderizar indicador de estado
+  // Función renderEstadoIndicador actualizada para usar el tooltip compacto
   const renderEstadoIndicador = (estado: string | null, reporte: Reporte | null) => {
     let bgColor = "bg-gray-200";
     let icon = "⏱";
@@ -48,39 +50,21 @@ export default function TablaTransmisiones({
     }
     
     return (
-      <div className={`${bgColor} w-16 h-16 rounded-lg shadow-md flex items-center justify-center cursor-pointer relative group transition-all duration-300 hover:shadow-lg`}>
-        {showIcon && <span className={`${iconColor} text-2xl`}>{icon}</span>}
-        
-        {/* Tooltip */}
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none">
-          <div className="p-2">
-            {estadoNormalizado === ESTADOS_TRANSMISION.SI_TRANSMITIO && (
-              <>
-                <div className="font-bold">Sí transmitió</div>
-                <div>Hora: {reporte?.horaReal || reporte?.hora || '-'}</div>
-              </>
-            )}
-            {estadoNormalizado === ESTADOS_TRANSMISION.NO_TRANSMITIO && (
-              <>
-                <div className="font-bold">No transmitió</div>
-                <div>Motivo: {reporte?.target || '-'}</div>
-                {reporte?.motivo && <div>Detalle: {reporte.motivo}</div>}
-              </>
-            )}
-            {estadoNormalizado === ESTADOS_TRANSMISION.TRANSMITIO_TARDE && (
-              <>
-                <div className="font-bold">Transmitió tarde</div>
-                <div>Hora programada: {reporte?.horaReal || reporte?.hora || '-'}</div>
-                <div>Hora real: {reporte?.hora_tt || '-'}</div>
-                {reporte?.motivo && <div>Motivo: {reporte.motivo}</div>}
-              </>
-            )}
-            {estadoNormalizado === ESTADOS_TRANSMISION.PENDIENTE && (
-              <div className="font-bold">Pendiente</div>
-            )}
-          </div>
-          <div className="w-3 h-3 bg-gray-800 transform rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2"></div>
+      <div className="relative tooltip-trigger">
+        <div 
+          className={`${bgColor} w-16 h-16 rounded-lg shadow-md flex items-center justify-center cursor-pointer hover:shadow-lg transition-all duration-300`}
+          onClick={() => abrirFormulario(
+            filialSeleccionada!,
+            programaSeleccionado!,
+            reporte?.fecha ? new Date(reporte.fecha).toLocaleDateString('es-ES', { weekday: 'long' }) : 'desconocido',
+            reporte?.fecha || ''
+          )}
+        >
+          {showIcon && <span className={`${iconColor} text-2xl`}>{icon}</span>}
         </div>
+        
+        {/* Tooltip compacto */}
+        <CompactTooltip estado={estadoNormalizado} reporte={reporte} />
       </div>
     );
   };
@@ -142,16 +126,7 @@ export default function TablaTransmisiones({
             
             return (
               <div key={idx} className="flex justify-center items-center">
-                <div 
-                  onClick={() => abrirFormulario(
-                    filialSeleccionada,
-                    programaSeleccionado,
-                    dia.nombre,
-                    dia.fecha
-                  )}
-                >
-                  {renderEstadoIndicador(reporte?.estado || null, reporte)}
-                </div>
+                {renderEstadoIndicador(reporte?.estado || null, reporte)}
               </div>
             );
           })}

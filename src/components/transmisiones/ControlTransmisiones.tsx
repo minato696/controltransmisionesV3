@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   obtenerFechasSemana,
   normalizarDiaSemana
@@ -20,6 +20,13 @@ import {
 import TablaTransmisiones from './TablaTransmisiones';
 import FormularioReporte from './FormularioReporte';
 
+// Objeto global para rastrear reportes ya registrados y evitar duplicados
+// Necesita estar fuera del componente para persistir entre renderizados
+const reportesRegistrados: Record<string, boolean> = {};
+
+// Variable para controlar si ya hicimos log de los reportes problemáticos
+let problemasMostrados = false;
+
 export default function ControlTransmisiones() {
   // Estados principales
   const [filiales, setFiliales] = useState<Filial[]>([]);
@@ -34,6 +41,9 @@ export default function ControlTransmisiones() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reporteActual, setReporteActual] = useState<Reporte | null>(null);
+  
+  // Usamos useRef para rastrear si ya mostramos el mensaje sobre usar /api/reportes/fix
+  const fixMessageShown = useRef(false);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -52,6 +62,47 @@ export default function ControlTransmisiones() {
       cargarReportes();
     }
   }, [filialSeleccionada, programaSeleccionado, diasSemana]);
+
+  // Efecto para revisar los reportes después de cargarlos
+  useEffect(() => {
+    // Solo ejecutar una vez
+    if (reportes.length > 0 && !problemasMostrados) {
+      // Buscar reportes con motivo pero sin target
+      const reportesProblematicos = reportes.filter(r => r.motivo && !r.target);
+      
+      if (reportesProblematicos.length > 0 && !fixMessageShown.current) {
+        console.warn(
+          `Se encontraron ${reportesProblematicos.length} reportes con motivo pero sin target. ` +
+          `Para corregir automáticamente estos reportes, visite /api/reportes/fix`
+        );
+        
+        // Solo mostrar este mensaje una vez
+        fixMessageShown.current = true;
+        problemasMostrados = true;
+      }
+    }
+  }, [reportes]);
+
+  // Función para formatear el motivo del reporte
+  const formatearMotivo = (reporte: Reporte | null): string => {
+    if (!reporte) return '-';
+    
+    // Si hay un motivo específico, mostrarlo
+    if (reporte.motivo && reporte.motivo.trim() !== '') {
+      // Si el target es 'Otros', mostrar tanto el target como el motivo
+      if (reporte.target === 'Otros') {
+        return `${reporte.motivo}`;
+      }
+      return reporte.motivo;
+    }
+    
+    // Si hay un target, mostrarlo
+    if (reporte.target && reporte.target.trim() !== '') {
+      return reporte.target;
+    }
+    
+    return '-';
+  };
 
   // Cargar datos desde la API
   const cargarDatosIniciales = async () => {
@@ -164,11 +215,18 @@ export default function ControlTransmisiones() {
 
   // Obtener el reporte para una fecha específica
   const getReporte = (filialId: number, programaId: number, fecha: string): Reporte | null => {
-    return reportes.find(r => 
+    const reporte = reportes.find(r => 
       r.filialId === filialId && 
       r.programaId === programaId && 
       r.fecha === fecha
-    ) || null;
+    );
+    
+    // Si no hay reporte, devolver null
+    if (!reporte) return null;
+    
+    // Dejamos los logs en un lugar centralizado en lugar de generar en cada llamada a getReporte
+    
+    return reporte;
   };
 
   // Abrir formulario

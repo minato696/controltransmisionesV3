@@ -1,0 +1,88 @@
+/* Estilos para tooltips compactos */
+.tooltip-compact {
+  position: absolute;
+  width: auto;
+  min-width: 160px;
+  max-width: 200px;
+  padding: 6px 8px;
+  background-color: #1F2937;
+  color: white;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  transform: translateX(-50%);
+  left: 50%;
+  bottom: 125%;
+  z-index: 1000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  text-align: left;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+/* Flecha del tooltip */
+.tooltip-compact::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #1F2937 transparent transparent transparent;
+}
+
+/* Estilos para diferentes estados */
+.tooltip-compact.no-transmitio {
+  border-left: 3px solid #ef4444;
+}
+
+.tooltip-compact.si-transmitio {
+  border-left: 3px solid #10b981;
+}
+
+.tooltip-compact.transmitio-tarde {
+  border-left: 3px solid #f59e0b;
+}
+
+/* Título del tooltip */
+.tooltip-header {
+  font-weight: bold;
+  font-size: 0.75rem;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  text-align: center;
+  width: 100%;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 3px;
+}
+
+/* Filas de información */
+.tooltip-info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+/* Etiquetas */
+.tooltip-label {
+  font-weight: 500;
+  color: #d1d5db;
+  margin-right: 6px;
+  min-width: 45px;
+}
+
+/* Valores */
+.tooltip-value {
+  text-align: right;
+  font-weight: 400;
+  word-break: break-word;
+  font-size: 0.7rem;
+}
+
+/* Mostrar al hacer hover */
+.tooltip-trigger:hover .tooltip-compact {
+  visibility: visible;
+  opacity: 1;
+}
