@@ -28,6 +28,7 @@ import TransmisionTooltip from './TransmisionTooltip';
 import ReporteForm from './ReporteForm';
 import SelectorSemanasMejorado from './SelectorSemanasMejorado';
 import VistaReportesDiaSemanalStyle from './VistaReportesDiaSemanalStyle';
+import DashboardGeneral from '@/components/dashboard/DashboardGeneral';
 
 export default function ControlTransmisiones() {
   // Estados principales
@@ -48,6 +49,8 @@ export default function ControlTransmisiones() {
   const [fechaInicio, setFechaInicio] = useState<Date>(new Date());
   const [fechaFin, setFechaFin] = useState<Date>(endOfWeek(new Date(), { weekStartsOn: 1 }));
   const [modoSeleccion, setModoSeleccion] = useState<'semana' | 'dia' | 'rango'>('semana');
+  // Estado para alternar entre vista normal y resumen general
+  const [mostrarResumen, setMostrarResumen] = useState<boolean>(true);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -265,6 +268,13 @@ export default function ControlTransmisiones() {
     ) || null;
   };
 
+  // Cuando se carga la página, cargar reportes para el resumen general
+  useEffect(() => {
+    if (mostrarResumen && !cargando && filiales.length > 0 && programas.length > 0) {
+      cargarReportes();
+    }
+  }, [mostrarResumen, cargando, filiales.length, programas.length]);
+
   // Abrir formulario
   const abrirFormulario = (filialId: number, programaId: number, dia: string, fecha: string) => {
     const filial = filiales.find(f => Number(f.id) === filialId);
@@ -451,12 +461,14 @@ export default function ControlTransmisiones() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>
-            {programaSeleccionado && filialSeleccionada ? (
+            {programaSeleccionado && filialSeleccionada && !mostrarResumen ? (
               <>
                 {filiales.find(f => Number(f.id) === filialSeleccionada)?.nombre} - {programas.find(p => Number(p.id) === programaSeleccionado)?.nombre}
               </>
-            ) : programaSeleccionado ? (
+            ) : programaSeleccionado && !mostrarResumen ? (
               programas.find(p => Number(p.id) === programaSeleccionado)?.nombre
+            ) : mostrarResumen ? (
+              "Resumen General"
             ) : (
               "Sistema de Control de Transmisiones"
             )}
@@ -480,72 +492,94 @@ export default function ControlTransmisiones() {
         </div>
       )}
 
-      {/* Selector de semanas mejorado y modos de visualización */}
-      <div className="px-6 py-3">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0 md:space-x-4">
-          <SelectorSemanasMejorado 
-            fechaInicio={fechaInicio}
-            fechaFin={fechaFin}
-            onFechasChange={handleFechasChange}
-            modoSeleccion={modoSeleccion}
-            onModoSeleccionChange={handleModoSeleccionChange}
-          />
-          
-          {/* Selector de modo de visualización (más visible) */}
-          <div className="bg-white border rounded-lg shadow-sm flex items-center h-10">
-            <button
-              onClick={() => handleModoSeleccionChange('semana')}
-              className={`px-4 h-full rounded-l-lg ${modoSeleccion === 'semana' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-            >
-              Semana
-            </button>
-            <button
-              onClick={() => handleModoSeleccionChange('dia')}
-              className={`px-4 h-full ${modoSeleccion === 'dia' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-            >
-              Día
-            </button>
-            <button
-              onClick={() => handleModoSeleccionChange('rango')}
-              className={`px-4 h-full rounded-r-lg ${modoSeleccion === 'rango' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-            >
-              Rango
-            </button>
+      {/* Selector de semanas mejorado y modos de visualización - mostrar solo si no está en modo resumen */}
+      {!mostrarResumen && (
+        <div className="px-6 py-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0 md:space-x-4">
+            <SelectorSemanasMejorado 
+              fechaInicio={fechaInicio}
+              fechaFin={fechaFin}
+              onFechasChange={handleFechasChange}
+              modoSeleccion={modoSeleccion}
+              onModoSeleccionChange={handleModoSeleccionChange}
+            />
+            
+            {/* Selector de modo de visualización (más visible) */}
+            <div className="bg-white border rounded-lg shadow-sm flex items-center h-10">
+              <button
+                onClick={() => handleModoSeleccionChange('semana')}
+                className={`px-4 h-full rounded-l-lg ${modoSeleccion === 'semana' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              >
+                Semana
+              </button>
+              <button
+                onClick={() => handleModoSeleccionChange('dia')}
+                className={`px-4 h-full ${modoSeleccion === 'dia' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              >
+                Día
+              </button>
+              <button
+                onClick={() => handleModoSeleccionChange('rango')}
+                className={`px-4 h-full rounded-r-lg ${modoSeleccion === 'rango' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              >
+                Rango
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Leyenda */}
-      <div className="bg-white border-b border-gray-200 py-2 px-4 flex items-center space-x-6 text-sm">
-        <div className="font-medium">Leyenda:</div>
-        <div className="flex items-center">
-          <div className="w-4 h-4 bg-emerald-500 rounded mr-2"></div>
-          <span>Transmitió</span>
+      {/* Leyenda - mostrar solo si no está en modo resumen */}
+      {!mostrarResumen && (
+        <div className="bg-white border-b border-gray-200 py-2 px-4 flex items-center space-x-6 text-sm">
+          <div className="font-medium">Leyenda:</div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-emerald-500 rounded mr-2"></div>
+            <span>Transmitió</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-red-500 rounded mr-2"></div>
+            <span>No transmitió</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-amber-500 rounded mr-2"></div>
+            <span>Transmitió Tarde</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-gray-200 rounded mr-2"></div>
+            <span>Pendiente</span>
+          </div>
         </div>
-        <div className="flex items-center">
-          <div className="w-4 h-4 bg-red-500 rounded mr-2"></div>
-          <span>No transmitió</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-4 h-4 bg-amber-500 rounded mr-2"></div>
-          <span>Transmitió Tarde</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-4 h-4 bg-gray-200 rounded mr-2"></div>
-          <span>Pendiente</span>
-        </div>
-      </div>
+      )}
 
       {/* Contenedor principal */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - Menú de filiales */}
-        <div className="w-64 bg-white shadow-md z-10 overflow-y-auto">
+        <div className="w-64 bg-white shadow-md z-10 overflow-y-auto flex-shrink-0">
+          {/* Opción de Resumen General en el menú lateral */}
+          <div
+            className={`flex justify-between px-6 py-3 cursor-pointer hover:bg-blue-50 transition-colors border-b-2 ${
+              mostrarResumen ? "bg-blue-50 border-blue-600 font-medium" : "border-transparent"
+            }`}
+            onClick={() => setMostrarResumen(true)}
+          >
+            <div className={`flex items-center ${mostrarResumen ? "text-blue-700" : "text-gray-700"}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Resumen General
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+          
           <div className="py-4 px-6 text-lg font-bold text-gray-800 border-b border-gray-100">
             Filiales
           </div>
@@ -559,11 +593,14 @@ export default function ControlTransmisiones() {
                 <div
                   key={filial.id}
                   className={`flex justify-between px-6 py-3 cursor-pointer hover:bg-blue-50 transition-colors ${
-                    filialSeleccionada === Number(filial.id) ? "bg-blue-50 border-l-4 border-blue-600 font-medium" : ""
+                    filialSeleccionada === Number(filial.id) && !mostrarResumen ? "bg-blue-50 border-l-4 border-blue-600 font-medium" : ""
                   }`}
-                  onClick={() => handleFilialClick(Number(filial.id))}
+                  onClick={() => {
+                    setMostrarResumen(false);
+                    handleFilialClick(Number(filial.id));
+                  }}
                 >
-                  <div className={filialSeleccionada === Number(filial.id) ? "text-blue-700" : "text-gray-700"}>
+                  <div className={filialSeleccionada === Number(filial.id) && !mostrarResumen ? "text-blue-700" : "text-gray-700"}>
                     {filial.nombre}
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -576,9 +613,9 @@ export default function ControlTransmisiones() {
         </div>
 
         {/* Contenido principal */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Pestañas de programas */}
-          {filialSeleccionada && (
+        <div className={`flex-1 flex flex-col ${mostrarResumen ? 'overflow-hidden' : 'overflow-hidden'}`}>
+          {/* Pestañas de programas - mostrar solo si hay filial seleccionada y no estamos en resumen */}
+          {filialSeleccionada && !mostrarResumen && (
             <div className="bg-white border-b border-gray-200 overflow-x-auto shadow-sm">
               <div className="flex px-4">
                 {getProgramasDeFilial().map((prog) => (
@@ -599,9 +636,14 @@ export default function ControlTransmisiones() {
             </div>
           )}
 
-          {/* Tabla de días y estados */}
-          <div className="flex-1 overflow-auto">
-            {filialSeleccionada && programaSeleccionado && modoSeleccion === 'semana' ? (
+          {/* Tabla de días y estados o Resumen General */}
+          <div className={`${mostrarResumen ? 'h-full' : 'flex-1 overflow-auto'}`}>
+            {/* Mostrar el componente de Resumen General si está seleccionado */}
+            {mostrarResumen ? (
+              <div className="h-full overflow-auto">
+                <DashboardGeneral />
+              </div>
+            ) : filialSeleccionada && programaSeleccionado && modoSeleccion === 'semana' ? (
               <div className="p-6">
                 {/* Días de la semana */}
                 <div className="grid grid-cols-6 gap-4 mb-4">
@@ -660,7 +702,7 @@ export default function ControlTransmisiones() {
                   })}
                 </div>
               </div>
-            ) : modoSeleccion === 'dia' ? (
+            ) : modoSeleccion === 'dia' && !mostrarResumen ? (
               // Vista de reportes por día (estilo semanal)
               <VistaReportesDiaSemanalStyle 
                 fecha={fechaInicio}
@@ -671,7 +713,7 @@ export default function ControlTransmisiones() {
                 programaSeleccionado={programaSeleccionado}
                 onAbrirFormulario={abrirFormulario}
               />
-            ) : modoSeleccion === 'rango' ? (
+            ) : modoSeleccion === 'rango' && !mostrarResumen ? (
               // Vista de reportes por rango (similar a la vista por día pero considerando todas las fechas)
               <div className="p-6">
                 <h2 className="text-xl font-bold mb-4">
@@ -769,10 +811,14 @@ export default function ControlTransmisiones() {
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center text-gray-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  <p className="text-lg">Selecciona una filial y un programa para ver su programación</p>
+                  {!mostrarResumen && (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      <p className="text-lg">Selecciona una filial y un programa para ver su programación</p>
+                    </>
+                  )}
                 </div>
               </div>
             )}
