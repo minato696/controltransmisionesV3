@@ -80,18 +80,6 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Barra de navegación */}
-        {/* Barra de navegación */}
-      <div className="bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 py-2 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-blue-600 flex items-center">
-            <img src="https://statics.exitosanoticias.pe/exitosa/img/global/exitosa.svg" alt="Exitosa" className="h-8 mr-2" />
-            Sistema de Control de Transmisiones
-          </Link>
-          <div className="flex space-x-2">
-            {/* Botones eliminados */}
-          </div>
-        </div>
-      </div>
 
       {/* Contenido principal */}
       <div className="flex-1">

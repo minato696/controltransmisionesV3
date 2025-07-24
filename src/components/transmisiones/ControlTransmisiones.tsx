@@ -469,34 +469,46 @@ export default function ControlTransmisiones() {
     );
   }
 
+  // Obtener el nombre de la filial seleccionada
+  const filialNombre = filialSeleccionada 
+    ? filiales.find(f => Number(f.id) === filialSeleccionada)?.nombre 
+    : '';
+
+  // Toggle para mostrar/ocultar la barra lateral
+  const toggleSidebar = () => {
+    setSidebarVisible(!sidebarVisible);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans overflow-hidden">
       {/* Barra superior */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 flex items-center shadow-md">
-        {/* Botón de menú para móviles */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 flex items-center shadow-md z-20">
+        {/* Botón de menú para mostrar/ocultar sidebar */}
         <button 
-          className="md:hidden p-2 mr-2 rounded-md text-white hover:bg-blue-800"
-          onClick={() => setSidebarVisible(!sidebarVisible)}
+          className="p-2 mr-2 rounded-md text-white hover:bg-blue-800"
+          onClick={toggleSidebar}
+          aria-label={sidebarVisible ? "Ocultar menú" : "Mostrar menú"}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
         
+        {/* Logo + Título de la sección */}
         <div className="flex items-center text-lg font-semibold">
           <img src="https://statics.exitosanoticias.pe/exitosa/img/global/exitosa.svg" alt="Exitosa" className="h-6 mr-2" />
           <span>
+            Sistema Control de Transmisiones
             {filialSeleccionada && !mostrarResumen ? (
-              filiales.find(f => Number(f.id) === filialSeleccionada)?.nombre
+              <span> | {filialNombre}</span>
             ) : mostrarResumen ? (
-              "Resumen General"
+              ""
             ) : (
-              "Sistema de Control de Transmisiones"
+              ""
             )}
           </span>
         </div>
         
-        {/* La barra de navegación ya no tiene botones */}
         <div className="ml-auto"></div>
       </div>
 
@@ -516,357 +528,353 @@ export default function ControlTransmisiones() {
         </div>
       )}
 
-      {/* Selector de semanas mejorado y modos de visualización - mostrar solo si no está en modo resumen */}
-      {!mostrarResumen && (
-        <div className="px-6 py-3">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0 md:space-x-4">
-            <SelectorSemanasMejorado 
-              fechaInicio={fechaInicio}
-              fechaFin={fechaFin}
-              onFechasChange={handleFechasChange}
-              modoSeleccion={modoSeleccion}
-              onModoSeleccionChange={handleModoSeleccionChange}
-            />
-            
-            {/* Selector de modo de visualización (más visible) */}
-            <div className="bg-white border rounded-lg shadow-sm flex items-center h-10">
-              <button
-                onClick={() => handleModoSeleccionChange('semana')}
-                className={`px-4 h-full rounded-l-lg ${modoSeleccion === 'semana' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-              >
-                Semana
-              </button>
-              <button
-                onClick={() => handleModoSeleccionChange('dia')}
-                className={`px-4 h-full ${modoSeleccion === 'dia' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-              >
-                Día
-              </button>
-              <button
-                onClick={() => handleModoSeleccionChange('rango')}
-                className={`px-4 h-full rounded-r-lg ${modoSeleccion === 'rango' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-              >
-                Rango
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Leyenda - mostrar solo si no está en modo resumen */}
-      {!mostrarResumen && (
-        <div className="bg-white border-b border-gray-200 py-2 px-4 flex items-center space-x-6 text-sm">
-          <div className="font-medium">Leyenda:</div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-emerald-500 rounded mr-2"></div>
-            <span>Transmitió</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-red-500 rounded mr-2"></div>
-            <span>No transmitió</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-amber-500 rounded mr-2"></div>
-            <span>Transmitió Tarde</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-gray-200 rounded mr-2"></div>
-            <span>Pendiente</span>
-          </div>
-        </div>
-      )}
-
       {/* Contenedor principal */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - Menú de filiales */}
         <div 
           className={`
-            w-64 bg-white shadow-md z-10 overflow-y-auto flex-shrink-0 max-h-screen
+            w-64 bg-gray-900 text-white shadow-lg z-30 flex flex-col
             transition-all duration-300
-            ${sidebarVisible ? 'translate-x-0' : '-translate-x-full'}
-            md:translate-x-0 fixed md:relative h-screen
+            ${sidebarVisible ? 'translate-x-0' : '-translate-x-full'} 
+            fixed h-full md:relative
           `}
         >
-          {/* Opción de Resumen General en el menú lateral */}
-          <div
-            className={`flex justify-between px-6 py-3 cursor-pointer hover:bg-blue-50 transition-colors border-b-2 ${
-              mostrarResumen ? "bg-blue-50 border-blue-600 font-medium" : "border-transparent"
-            }`}
-            onClick={() => setMostrarResumen(true)}
-          >
-            <div className={`flex items-center ${mostrarResumen ? "text-blue-700" : "text-gray-700"}`}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {/* Contenedor principal de scroll */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600">
+            {/* Opción de Resumen General en el menú lateral */}
+            <div
+              className={`flex items-center px-6 py-4 cursor-pointer hover:bg-gray-800 transition-colors border-l-4 ${
+                mostrarResumen ? "border-blue-500" : "border-transparent"
+              }`}
+              onClick={() => setMostrarResumen(true)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              Resumen General
+              <span className={`${mostrarResumen ? "text-blue-300 font-medium" : ""}`}>
+                Resumen General
+              </span>
             </div>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-          
-          <div className="py-4 px-6 text-lg font-bold text-gray-800 border-b border-gray-100">
-            Filiales
-          </div>
-          
-          {/* Lista de filiales con scroll mejorado */}
-          <div className="py-2 overflow-y-auto max-h-[calc(100vh-120px)] custom-scrollbar">
-            {filiales.length === 0 ? (
-              <div className="px-6 py-8 text-center text-gray-500">
-                <p className="text-sm">No hay filiales disponibles</p>
-              </div>
-            ) : (
-              filiales.map((filial) => (
-                <div
-                  key={filial.id}
-                  className={`flex justify-between px-6 py-3 cursor-pointer hover:bg-blue-50 transition-colors ${
-                    filialSeleccionada === Number(filial.id) && !mostrarResumen ? "bg-blue-50 border-l-4 border-blue-600 font-medium" : ""
-                  }`}
-                  onClick={() => {
-                    setMostrarResumen(false);
-                    handleFilialClick(Number(filial.id));
-                    
-                    // En móviles, cerrar el sidebar después de seleccionar
-                    if (window.innerWidth < 768) {
-                      setSidebarVisible(false);
-                    }
-                  }}
-                >
-                  <div className={filialSeleccionada === Number(filial.id) && !mostrarResumen ? "text-blue-700" : "text-gray-700"}>
-                    {filial.nombre}
-                  </div>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-                  </svg>
+            
+            <div className="px-6 py-4 text-lg font-bold text-gray-300 border-b border-gray-700">
+              Filiales
+            </div>
+            
+            {/* Lista de filiales con scroll mejorado */}
+            <div className="py-2">
+              {filiales.length === 0 ? (
+                <div className="px-6 py-8 text-center text-gray-400">
+                  <p className="text-sm">No hay filiales disponibles</p>
                 </div>
-              ))
-            )}
+              ) : (
+                filiales.map((filial) => (
+                  <div
+                    key={filial.id}
+                    className={`flex items-center px-6 py-3 cursor-pointer hover:bg-gray-800 transition-colors border-l-4 ${
+                      filialSeleccionada === Number(filial.id) && !mostrarResumen ? "border-blue-500 bg-gray-800" : "border-transparent"
+                    }`}
+                    onClick={() => {
+                      setMostrarResumen(false);
+                      handleFilialClick(Number(filial.id));
+                      
+                      // En móviles, cerrar el sidebar después de seleccionar
+                      if (window.innerWidth < 768) {
+                        setSidebarVisible(false);
+                      }
+                    }}
+                  >
+                    <span className={filialSeleccionada === Number(filial.id) && !mostrarResumen ? "text-blue-300 font-medium" : ""}>
+                      {filial.nombre}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          
+          {/* Información del sistema - Footer */}
+          <div className="border-t border-gray-700 p-4 text-center text-sm text-gray-400 bg-gray-900 mt-auto">
+            <div className="font-medium text-gray-300">Area Sistemas</div>
+            <div>Radio Exitosa</div>
+            <div className="mt-1">Versión 2.4.0 © 2025</div>
           </div>
         </div>
 
         {/* Contenido principal */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Tabla de días y estados o Resumen General */}
-          <div className="h-full overflow-auto custom-scrollbar">
-            {/* Mostrar el componente de Resumen General si está seleccionado */}
-            {mostrarResumen ? (
-              <div className="h-full overflow-auto">
-                <DashboardGeneral />
-              </div>
-            ) : filialSeleccionada && modoSeleccion === 'semana' ? (
-              <div className="p-6">
-                {/* Nombre de la filial seleccionada */}
-                <div className="mb-6">
-                  <h2 className="text-xl font-bold text-gray-800">
-                    {filiales.find(f => Number(f.id) === filialSeleccionada)?.nombre}
-                  </h2>
-                </div>
-                
-                {/* Tabla de transmisiones */}
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Filial / Programa
-                        </th>
-                        {diasSemana.map((dia, idx) => {
-                          // Convertir la fecha de string a objeto Date
-                          const fechaDia = new Date(dia.fecha);
-                          // Formatear la fecha como DD/MM
-                          const fechaCorta = format(fechaDia, "dd/MM");
-                          
-                          return (
-                            <th key={idx} scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <div>{dia.nombre.substring(0, 3)}</div>
-                              <div>{fechaCorta}</div>
-                            </th>
-                          );
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {getProgramasDeFilial().map((programa) => (
-                        <tr key={programa.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="font-medium text-gray-900">{programa.nombre}</div>
-                            <div className="text-sm text-gray-500">{programa.horario || programa.horaInicio}</div>
-                          </td>
-                          {diasSemana.map((dia, idx) => {
-                            const transmiteEnDia = programaTransmiteEnDia(programa, dia.nombre);
-                            
-                            // Caso especial para programas de sábado
-                            const esProgramaSabado = programa.nombre.includes('(SÁBADO)') || programa.nombre.includes('(SABADO)');
-                            const esDiaSabado = dia.nombre.toUpperCase() === 'SÁBADO' || dia.nombre.toUpperCase() === 'SABADO';
-                            
-                            if (!transmiteEnDia || (esProgramaSabado && !esDiaSabado)) {
-                              return (
-                                <td key={idx} className="px-4 py-4 whitespace-nowrap text-center">
-                                  <div className="inline-block w-10 h-10 border border-gray-200 rounded-md bg-white"></div>
-                                </td>
-                              );
-                            }
-                            
-                            const reporte = getReporte(
-                              filialSeleccionada!, 
-                              Number(programa.id),
-                              dia.fecha
-                            );
-                            
-                            return (
-                              <td key={idx} className="px-4 py-4 whitespace-nowrap text-center">
-                                <div className="inline-flex justify-center">
-                                  <TransmisionTooltip 
-                                    estado={reporte?.estado || null}
-                                    reporte={reporte}
-                                    onClick={() => abrirFormulario(
-                                      filialSeleccionada!,
-                                      Number(programa.id),
-                                      dia.nombre,
-                                      dia.fecha
-                                    )}
-                                  />
-                                </div>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : modoSeleccion === 'dia' && !mostrarResumen ? (
-              // Vista de reportes por día (estilo semanal)
-              <VistaReportesDiaSemanalStyle 
-                fecha={fechaInicio}
-                reportes={reportes}
-                programas={programas}
-                filiales={filiales}
-                filialSeleccionada={filialSeleccionada}
-                programaSeleccionado={programaSeleccionado}
-                onAbrirFormulario={abrirFormulario}
-              />
-            ) : modoSeleccion === 'rango' && !mostrarResumen ? (
-              // Vista de reportes por rango (similar a la vista por día pero considerando todas las fechas)
-              <div className="p-6">
-                <h2 className="text-xl font-bold mb-4">
-                  Reportes del {format(fechaInicio, "d 'de' MMMM", { locale: es })} al {format(fechaFin, "d 'de' MMMM 'de' yyyy", { locale: es })}
-                </h2>
-                
-                {reportes.length === 0 ? (
-                  <div className="bg-gray-50 rounded-lg p-8 text-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    <p className="text-gray-600">No hay reportes para este rango de fechas</p>
+          {/* Mostrar el componente de Resumen General si está seleccionado */}
+          {mostrarResumen ? (
+            <div className="h-full overflow-auto">
+              <DashboardGeneral />
+            </div>
+          ) : (
+            <>
+              {/* Sección de controles de fecha y modo cuando se muestra una filial */}
+              <div className="bg-white border-b shadow-sm">
+                {/* Selector de semanas mejorado y modos de visualización */}
+                <div className="px-6 py-3">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0 md:space-x-4">
+                    <SelectorSemanasMejorado 
+                      fechaInicio={fechaInicio}
+                      fechaFin={fechaFin}
+                      onFechasChange={handleFechasChange}
+                      modoSeleccion={modoSeleccion}
+                      onModoSeleccionChange={handleModoSeleccionChange}
+                    />
+                    
+                    {/* Selector de modo de visualización (más visible) */}
+                    <div className="bg-white border rounded-lg shadow-sm flex items-center h-10">
+                      <button
+                        onClick={() => handleModoSeleccionChange('semana')}
+                        className={`px-4 h-full rounded-l-lg ${modoSeleccion === 'semana' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        Semana
+                      </button>
+                      <button
+                        onClick={() => handleModoSeleccionChange('dia')}
+                        className={`px-4 h-full ${modoSeleccion === 'dia' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        Día
+                      </button>
+                      <button
+                        onClick={() => handleModoSeleccionChange('rango')}
+                        className={`px-4 h-full rounded-r-lg ${modoSeleccion === 'rango' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        Rango
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
-                      <table className="min-w-full sticky-header sticky-first-column">
+                </div>
+                
+                {/* Leyenda */}
+                <div className="bg-white border-t border-gray-200 py-2 px-4 flex items-center space-x-6 text-sm">
+                  <div className="font-medium">Leyenda:</div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-emerald-500 rounded mr-2"></div>
+                    <span>Transmitió</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-red-500 rounded mr-2"></div>
+                    <span>No transmitió</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-amber-500 rounded mr-2"></div>
+                    <span>Transmitió Tarde</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-gray-200 rounded mr-2"></div>
+                    <span>Pendiente</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Tabla de días y estados */}
+              <div className="h-full overflow-auto custom-scrollbar">
+                {modoSeleccion === 'semana' ? (
+                  <div className="p-6">
+                    {/* Tabla de transmisiones */}
+                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filial</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Programa</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Filial / Programa
+                            </th>
+                            {diasSemana.map((dia, idx) => {
+                              // Convertir la fecha de string a objeto Date
+                              const fechaDia = new Date(dia.fecha);
+                              // Formatear la fecha como DD/MM
+                              const fechaCorta = format(fechaDia, "dd/MM");
+                              
+                              return (
+                                <th key={idx} scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  <div>{dia.nombre.substring(0, 3)}</div>
+                                  <div>{fechaCorta}</div>
+                                </th>
+                              );
+                            })}
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {/* Tabla de reportes por rango */}
-                          {reportes.filter(r => 
-                            filialSeleccionada ? r.filialId === filialSeleccionada : true
-                          ).map((reporte) => {
-                            const filial = filiales.find(f => Number(f.id) === reporte.filialId);
-                            const programa = programas.find(p => Number(p.id) === reporte.programaId);
-                            
-                            // Determinar color según estado
-                            let bgColor = "bg-gray-200";
-                            if (reporte.estado === 'si') bgColor = "bg-emerald-500";
-                            else if (reporte.estado === 'no') bgColor = "bg-red-500";
-                            else if (reporte.estado === 'tarde') bgColor = "bg-amber-500";
-                            
-                            // Formatear fecha para mostrar
-                            const fechaFormateada = new Date(reporte.fecha);
-                            
-                            return (
-                              <tr key={reporte.id_reporte}>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">
-                                    {format(fechaFormateada, "EEE d MMM", { locale: es })}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">{filial?.nombre || 'Desconocida'}</div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">{programa?.nombre || 'Desconocido'}</div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">
-                                    {reporte.horaReal || reporte.hora || '-'}
-                                    {reporte.estado === 'tarde' && reporte.hora_tt && (
-                                      <span className="text-xs text-gray-500 ml-2">→ {reporte.hora_tt}</span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${bgColor} text-white`}>
-                                    {reporte.estado === 'si' ? 'Transmitió' : 
-                                     reporte.estado === 'no' ? 'No transmitió' : 
-                                     reporte.estado === 'tarde' ? 'Transmitió tarde' : 'Pendiente'}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                  <button
-                                    onClick={() => {
-                                      const dia = format(fechaFormateada, "EEEE", { locale: es });
-                                      const diaFormateado = dia.charAt(0).toUpperCase() + dia.slice(1);
-                                      abrirFormulario(
-                                        reporte.filialId,
-                                        reporte.programaId,
-                                        diaFormateado,
-                                        reporte.fecha
-                                      );
-                                    }}
-                                    className="text-indigo-600 hover:text-indigo-900"
-                                  >
-                                    Editar
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
+                          {getProgramasDeFilial().map((programa) => (
+                            <tr key={programa.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="font-medium text-gray-900">{programa.nombre}</div>
+                                <div className="text-sm text-gray-500">{programa.horario || programa.horaInicio}</div>
+                              </td>
+                              {diasSemana.map((dia, idx) => {
+                                const transmiteEnDia = programaTransmiteEnDia(programa, dia.nombre);
+                                
+                                // Caso especial para programas de sábado
+                                const esProgramaSabado = programa.nombre.includes('(SÁBADO)') || programa.nombre.includes('(SABADO)');
+                                const esDiaSabado = dia.nombre.toUpperCase() === 'SÁBADO' || dia.nombre.toUpperCase() === 'SABADO';
+                                
+                                if (!transmiteEnDia || (esProgramaSabado && !esDiaSabado)) {
+                                  return (
+                                    <td key={idx} className="px-4 py-4 whitespace-nowrap text-center">
+                                      <div className="inline-block w-10 h-10 border border-gray-200 rounded-md bg-white"></div>
+                                    </td>
+                                  );
+                                }
+                                
+                                const reporte = getReporte(
+                                  filialSeleccionada!, 
+                                  Number(programa.id),
+                                  dia.fecha
+                                );
+                                
+                                return (
+                                  <td key={idx} className="px-4 py-4 whitespace-nowrap text-center">
+                                    <div className="inline-flex justify-center">
+                                      <TransmisionTooltip 
+                                        estado={reporte?.estado || null}
+                                        reporte={reporte}
+                                        onClick={() => abrirFormulario(
+                                          filialSeleccionada!,
+                                          Number(programa.id),
+                                          dia.nombre,
+                                          dia.fecha
+                                        )}
+                                      />
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center text-gray-500">
-                  {!mostrarResumen && (
-                    <>
+                ) : modoSeleccion === 'dia' ? (
+                  // Vista de reportes por día (estilo semanal)
+                  <VistaReportesDiaSemanalStyle 
+                    fecha={fechaInicio}
+                    reportes={reportes}
+                    programas={programas}
+                    filiales={filiales}
+                    filialSeleccionada={filialSeleccionada}
+                    programaSeleccionado={programaSeleccionado}
+                    onAbrirFormulario={abrirFormulario}
+                  />
+                ) : modoSeleccion === 'rango' ? (
+                  // Vista de reportes por rango (similar a la vista por día pero considerando todas las fechas)
+                  <div className="p-6">
+                    <h2 className="text-xl font-bold mb-4">
+                      Reportes del {format(fechaInicio, "d 'de' MMMM", { locale: es })} al {format(fechaFin, "d 'de' MMMM 'de' yyyy", { locale: es })}
+                    </h2>
+                    
+                    {reportes.length === 0 ? (
+                      <div className="bg-gray-50 rounded-lg p-8 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <p className="text-gray-600">No hay reportes para este rango de fechas</p>
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-lg shadow overflow-hidden">
+                        <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
+                          <table className="min-w-full sticky-header sticky-first-column">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filial</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Programa</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {/* Tabla de reportes por rango */}
+                              {reportes.filter(r => 
+                                filialSeleccionada ? r.filialId === filialSeleccionada : true
+                              ).map((reporte) => {
+                                const filial = filiales.find(f => Number(f.id) === reporte.filialId);
+                                const programa = programas.find(p => Number(p.id) === reporte.programaId);
+                                
+                                // Determinar color según estado
+                                let bgColor = "bg-gray-200";
+                                if (reporte.estado === 'si') bgColor = "bg-emerald-500";
+                                else if (reporte.estado === 'no') bgColor = "bg-red-500";
+                                else if (reporte.estado === 'tarde') bgColor = "bg-amber-500";
+                                
+                                // Formatear fecha para mostrar
+                                const fechaFormateada = new Date(reporte.fecha);
+                                
+                                return (
+                                  <tr key={reporte.id_reporte}>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="text-sm text-gray-900">
+                                        {format(fechaFormateada, "EEE d MMM", { locale: es })}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="text-sm text-gray-900">{filial?.nombre || 'Desconocida'}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="text-sm text-gray-900">{programa?.nombre || 'Desconocido'}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="text-sm text-gray-900">
+                                        {reporte.horaReal || reporte.hora || '-'}
+                                        {reporte.estado === 'tarde' && reporte.hora_tt && (
+                                          <span className="text-xs text-gray-500 ml-2">→ {reporte.hora_tt}</span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${bgColor} text-white`}>
+                                        {reporte.estado === 'si' ? 'Transmitió' : 
+                                         reporte.estado === 'no' ? 'No transmitió' : 
+                                         reporte.estado === 'tarde' ? 'Transmitió tarde' : 'Pendiente'}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                      <button
+                                        onClick={() => {
+                                          const dia = format(fechaFormateada, "EEEE", { locale: es });
+                                          const diaFormateado = dia.charAt(0).toUpperCase() + dia.slice(1);
+                                          abrirFormulario(
+                                            reporte.filialId,
+                                            reporte.programaId,
+                                            diaFormateado,
+                                            reporte.fecha
+                                          );
+                                        }}
+                                        className="text-indigo-600 hover:text-indigo-900"
+                                      >
+                                        Editar
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center text-gray-500">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
                       <p className="text-lg">Selecciona una filial y un programa para ver su programación</p>
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </div>
 
