@@ -21,11 +21,13 @@ import {
   guardarOActualizarReporte
 } from '../../services/api-client';
 import { endOfWeek, startOfWeek, format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 // Importamos los componentes nuevos
 import TransmisionTooltip from './TransmisionTooltip';
 import ReporteForm from './ReporteForm';
 import SelectorSemanasMejorado from './SelectorSemanasMejorado';
+import VistaReportesDiaSemanalStyle from './VistaReportesDiaSemanalStyle';
 
 export default function ControlTransmisiones() {
   // Estados principales
@@ -62,7 +64,7 @@ export default function ControlTransmisiones() {
     } else if (modoSeleccion === 'dia') {
       // En modo día, mostrar solo el día seleccionado
       const diaSeleccionado = fechaInicio;
-      const nombreDia = format(diaSeleccionado, 'EEEE', { locale: { code: 'es' } });
+      const nombreDia = format(diaSeleccionado, 'EEEE', { locale: es });
       
       // Capitalizar primera letra
       const nombreFormateado = nombreDia.charAt(0).toUpperCase() + nombreDia.slice(1);
@@ -77,7 +79,7 @@ export default function ControlTransmisiones() {
       let fechaActual = new Date(fechaInicio);
       
       while (fechaActual <= fechaFin) {
-        const nombreDia = format(fechaActual, 'EEEE', { locale: { code: 'es' } });
+        const nombreDia = format(fechaActual, 'EEEE', { locale: es });
         const nombreFormateado = nombreDia.charAt(0).toUpperCase() + nombreDia.slice(1);
         
         dias.push({
@@ -97,10 +99,15 @@ export default function ControlTransmisiones() {
 
   // Cargar reportes cuando cambie la selección
   useEffect(() => {
-    if (filialSeleccionada && programaSeleccionado && diasSemana.length > 0) {
+    // Si estamos en modo día, cargar reportes siempre que cambie la fecha
+    if (modoSeleccion === 'dia') {
+      cargarReportes();
+    } 
+    // En modo semana o rango, cargar reportes cuando haya filial y programa seleccionados
+    else if ((filialSeleccionada || programaSeleccionado) && diasSemana.length > 0) {
       cargarReportes();
     }
-  }, [filialSeleccionada, programaSeleccionado, diasSemana]);
+  }, [filialSeleccionada, programaSeleccionado, diasSemana, fechaInicio, modoSeleccion]);
 
   // Manejar cambios en el rango de fechas
   const handleFechasChange = (inicio: Date, fin: Date) => {
@@ -111,6 +118,14 @@ export default function ControlTransmisiones() {
   // Manejar cambios en el modo de selección
   const handleModoSeleccionChange = (modo: 'semana' | 'dia' | 'rango') => {
     setModoSeleccion(modo);
+    
+    // Si cambia a modo día, cargar reportes para ese día específico
+    if (modo === 'dia') {
+      // Asegurarnos de que la fecha inicial y final sean el mismo día
+      const fechaDia = new Date(fechaInicio);
+      setFechaFin(fechaDia);
+      cargarReportes();
+    }
   };
 
   // Cargar datos desde la API
@@ -436,9 +451,15 @@ export default function ControlTransmisiones() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>
-            {programaSeleccionado 
-              ? programas.find(p => Number(p.id) === programaSeleccionado)?.nombre 
-              : "Sistema de Control de Transmisiones"}
+            {programaSeleccionado && filialSeleccionada ? (
+              <>
+                {filiales.find(f => Number(f.id) === filialSeleccionada)?.nombre} - {programas.find(p => Number(p.id) === programaSeleccionado)?.nombre}
+              </>
+            ) : programaSeleccionado ? (
+              programas.find(p => Number(p.id) === programaSeleccionado)?.nombre
+            ) : (
+              "Sistema de Control de Transmisiones"
+            )}
           </span>
         </div>
       </div>
@@ -459,15 +480,45 @@ export default function ControlTransmisiones() {
         </div>
       )}
 
-      {/* Selector de semanas mejorado */}
+      {/* Selector de semanas mejorado y modos de visualización */}
       <div className="px-6 py-3">
-        <SelectorSemanasMejorado 
-          fechaInicio={fechaInicio}
-          fechaFin={fechaFin}
-          onFechasChange={handleFechasChange}
-          modoSeleccion={modoSeleccion}
-          onModoSeleccionChange={handleModoSeleccionChange}
-        />
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0 md:space-x-4">
+          <SelectorSemanasMejorado 
+            fechaInicio={fechaInicio}
+            fechaFin={fechaFin}
+            onFechasChange={handleFechasChange}
+            modoSeleccion={modoSeleccion}
+            onModoSeleccionChange={handleModoSeleccionChange}
+          />
+          
+          {/* Selector de modo de visualización (más visible) */}
+          <div className="bg-white border rounded-lg shadow-sm flex items-center h-10">
+            <button
+              onClick={() => handleModoSeleccionChange('semana')}
+              className={`px-4 h-full rounded-l-lg ${modoSeleccion === 'semana' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+            >
+              Semana
+            </button>
+            <button
+              onClick={() => handleModoSeleccionChange('dia')}
+              className={`px-4 h-full ${modoSeleccion === 'dia' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+            >
+              Día
+            </button>
+            <button
+              onClick={() => handleModoSeleccionChange('rango')}
+              className={`px-4 h-full rounded-r-lg ${modoSeleccion === 'rango' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+            >
+              Rango
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Leyenda */}
@@ -550,19 +601,28 @@ export default function ControlTransmisiones() {
 
           {/* Tabla de días y estados */}
           <div className="flex-1 overflow-auto">
-            {filialSeleccionada && programaSeleccionado ? (
+            {filialSeleccionada && programaSeleccionado && modoSeleccion === 'semana' ? (
               <div className="p-6">
                 {/* Días de la semana */}
                 <div className="grid grid-cols-6 gap-4 mb-4">
                   {diasSemana.filter(dia => {
                     const programa = programas.find(p => Number(p.id) === programaSeleccionado);
                     return programa && programaTransmiteEnDia(programa, dia.nombre);
-                  }).map((dia, idx) => (
-                    <div key={idx} className="text-center">
-                      <div className="font-medium text-gray-800">{dia.nombre}</div>
-                      <div className="text-xs text-gray-500">{dia.fecha}</div>
-                    </div>
-                  ))}
+                  }).map((dia, idx) => {
+                    // Convertir la fecha de string a objeto Date
+                    const fechaDia = new Date(dia.fecha);
+                    // Formatear la fecha como DD-MM-YYYY
+                    const fechaFormateada = format(fechaDia, "dd-MM-yyyy");
+                    
+                    return (
+                      <div key={idx} className="text-center">
+                        <div className="font-bold text-blue-600 text-base">
+                          {dia.nombre}
+                        </div>
+                        <div className="text-xs text-gray-500">{fechaFormateada}</div>
+                      </div>
+                    );
+                  })}
                 </div>
                 
                 {/* Estados de transmisión */}
@@ -599,6 +659,112 @@ export default function ControlTransmisiones() {
                     );
                   })}
                 </div>
+              </div>
+            ) : modoSeleccion === 'dia' ? (
+              // Vista de reportes por día (estilo semanal)
+              <VistaReportesDiaSemanalStyle 
+                fecha={fechaInicio}
+                reportes={reportes}
+                programas={programas}
+                filiales={filiales}
+                filialSeleccionada={filialSeleccionada}
+                programaSeleccionado={programaSeleccionado}
+                onAbrirFormulario={abrirFormulario}
+              />
+            ) : modoSeleccion === 'rango' ? (
+              // Vista de reportes por rango (similar a la vista por día pero considerando todas las fechas)
+              <div className="p-6">
+                <h2 className="text-xl font-bold mb-4">
+                  Reportes del {format(fechaInicio, "d 'de' MMMM", { locale: es })} al {format(fechaFin, "d 'de' MMMM 'de' yyyy", { locale: es })}
+                </h2>
+                
+                {reportes.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <p className="text-gray-600">No hay reportes para este rango de fechas</p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <table className="min-w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filial</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Programa</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {/* Tabla de reportes por rango */}
+                        {reportes.map((reporte) => {
+                          const filial = filiales.find(f => Number(f.id) === reporte.filialId);
+                          const programa = programas.find(p => Number(p.id) === reporte.programaId);
+                          
+                          // Determinar color según estado
+                          let bgColor = "bg-gray-200";
+                          if (reporte.estado === 'si') bgColor = "bg-emerald-500";
+                          else if (reporte.estado === 'no') bgColor = "bg-red-500";
+                          else if (reporte.estado === 'tarde') bgColor = "bg-amber-500";
+                          
+                          // Formatear fecha para mostrar
+                          const fechaFormateada = new Date(reporte.fecha);
+                          
+                          return (
+                            <tr key={reporte.id_reporte}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {format(fechaFormateada, "EEE d MMM", { locale: es })}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">{filial?.nombre || 'Desconocida'}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">{programa?.nombre || 'Desconocido'}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {reporte.horaReal || reporte.hora || '-'}
+                                  {reporte.estado === 'tarde' && reporte.hora_tt && (
+                                    <span className="text-xs text-gray-500 ml-2">→ {reporte.hora_tt}</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${bgColor} text-white`}>
+                                  {reporte.estado === 'si' ? 'Transmitió' : 
+                                   reporte.estado === 'no' ? 'No transmitió' : 
+                                   reporte.estado === 'tarde' ? 'Transmitió tarde' : 'Pendiente'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button
+                                  onClick={() => {
+                                    const dia = format(fechaFormateada, "EEEE", { locale: es });
+                                    const diaFormateado = dia.charAt(0).toUpperCase() + dia.slice(1);
+                                    abrirFormulario(
+                                      reporte.filialId,
+                                      reporte.programaId,
+                                      diaFormateado,
+                                      reporte.fecha
+                                    );
+                                  }}
+                                  className="text-indigo-600 hover:text-indigo-900"
+                                >
+                                  Editar
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center justify-center h-full">

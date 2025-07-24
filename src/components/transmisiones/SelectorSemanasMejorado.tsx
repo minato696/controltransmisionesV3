@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useRef, useEffect } from 'react';
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, addDays, isWithinInterval, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -336,9 +334,12 @@ const SelectorSemanasMejorado: React.FC<SelectorSemanasProps> = ({
           {/* Botón hoy */}
           <button 
             type="button"
-            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+            className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded hover:bg-blue-100 transition-colors flex items-center"
             onClick={irAHoy}
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
             Hoy
           </button>
           
@@ -409,7 +410,7 @@ const SelectorSemanasMejorado: React.FC<SelectorSemanasProps> = ({
       {mostrarCalendario && (
         <div 
           ref={calendarRef}
-          className="absolute z-30 mt-1 bg-white border rounded-lg shadow-lg p-4 w-80 max-h-[36rem] overflow-hidden"
+          className="absolute z-30 mt-1 bg-white border rounded-lg shadow-lg p-4 w-80 max-h-[36rem] overflow-hidden left-1/2 transform -translate-x-1/2"
         >
           {/* Encabezado del calendario */}
           <div className="mb-4 flex items-center justify-between">
