@@ -37,31 +37,10 @@ const ReporteForm: React.FC<ReporteFormProps> = ({
   const [horaTT, setHoraTT] = useState('');
   const [target, setTarget] = useState('');
   const [motivoPersonalizado, setMotivoPersonalizado] = useState('');
-  
-  // Debug
-  useEffect(() => {
-    // Solo mostrar logs en desarrollo y si está habilitado
-    const DEBUG_ENABLED = false; // Cambiar a true para habilitar logs de depuración
-    
-    if (DEBUG_ENABLED) {
-      console.log('Estado actual del formulario:', { 
-        estadoTransmision, 
-        horaReal, 
-        horaTT, 
-        target, 
-        motivoPersonalizado,
-        reporteActual: reporteActual ? 
-          { estado: reporteActual.estado, target: reporteActual.target, motivo: reporteActual.motivo } : 
-          'No hay reporte actual' 
-      });
-    }
-  }, [estadoTransmision, horaReal, horaTT, target, motivoPersonalizado, reporteActual]);
 
   // Inicializar valores del formulario cuando cambia el reporte actual
   useEffect(() => {
     if (reporteActual) {
-      console.log('Inicializando con reporte actual:', reporteActual);
-      
       // Establecer estado de transmisión
       setEstadoTransmision(reporteActual.estado || ESTADOS_TRANSMISION.PENDIENTE);
       
@@ -72,12 +51,10 @@ const ReporteForm: React.FC<ReporteFormProps> = ({
       // Manejar target y motivo personalizado
       if (reporteActual.motivo) {
         // Si hay un motivo personalizado, seleccionar "Otros"
-        console.log('Encontrado motivo personalizado, estableciendo target como "Otros"');
         setTarget('Otros');
         setMotivoPersonalizado(reporteActual.motivo);
       } else if (reporteActual.target) {
         // Si hay un target pero no motivo personalizado
-        console.log('Estableciendo target:', reporteActual.target);
         setTarget(reporteActual.target);
         setMotivoPersonalizado('');
       } else {
@@ -86,7 +63,6 @@ const ReporteForm: React.FC<ReporteFormProps> = ({
         setMotivoPersonalizado('');
       }
     } else if (transmisionEditar) {
-      console.log('Inicializando con transmisión nueva');
       setEstadoTransmision(ESTADOS_TRANSMISION.PENDIENTE);
       setHoraReal(transmisionEditar.hora || '');
       setHoraTT('');
@@ -97,8 +73,6 @@ const ReporteForm: React.FC<ReporteFormProps> = ({
 
   // Efecto adicional para forzar la selección del valor correcto en los selectores
   useEffect(() => {
-    const DEBUG_ENABLED = false; // Cambiar a true para habilitar logs de depuración
-    
     if (reporteActual?.motivo && mostrar) {
       // Usar un pequeño timeout para asegurar que los selectores estén disponibles
       const timer = setTimeout(() => {
@@ -110,7 +84,6 @@ const ReporteForm: React.FC<ReporteFormProps> = ({
         if (selector) {
           const selectElement = document.querySelector(`select[data-target-select="${selector}"]`);
           if (selectElement) {
-            if (DEBUG_ENABLED) console.log(`Forzando valor 'Otros' en selector ${selector}`, selectElement);
             (selectElement as HTMLSelectElement).value = 'Otros';
           }
         }
@@ -123,7 +96,6 @@ const ReporteForm: React.FC<ReporteFormProps> = ({
   // Manejar cambio de estado de transmisión
   const handleEstadoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nuevoEstado = e.target.value;
-    console.log('Cambio de estado:', nuevoEstado);
     setEstadoTransmision(nuevoEstado);
     
     // Conservar valores si hay reporte actual
@@ -167,7 +139,6 @@ const ReporteForm: React.FC<ReporteFormProps> = ({
   // Manejar cambio de target
   const handleTargetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nuevoTarget = e.target.value;
-    console.log('Cambio de target:', nuevoTarget);
     setTarget(nuevoTarget);
     
     // Si cambia a un valor diferente de "Otros", limpiar el motivo personalizado
@@ -182,14 +153,6 @@ const ReporteForm: React.FC<ReporteFormProps> = ({
 
   // Manejar envío del formulario
   const handleSubmit = async () => {
-    console.log('Enviando formulario con datos:', {
-      estadoTransmision,
-      horaReal,
-      horaTT,
-      target,
-      motivoPersonalizado
-    });
-    
     await onGuardar({
       estadoTransmision,
       horaReal,

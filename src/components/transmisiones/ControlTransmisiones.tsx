@@ -20,10 +20,12 @@ import {
   getReportesPorFechas,
   guardarOActualizarReporte
 } from '../../services/api-client';
+import { endOfWeek, startOfWeek, format } from 'date-fns';
 
 // Importamos los componentes nuevos
 import TransmisionTooltip from './TransmisionTooltip';
 import ReporteForm from './ReporteForm';
+import SelectorSemanasMejorado from './SelectorSemanasMejorado';
 
 export default function ControlTransmisiones() {
   // Estados principales
@@ -40,17 +42,58 @@ export default function ControlTransmisiones() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reporteActual, setReporteActual] = useState<Reporte | null>(null);
+  // Estados para fechas y modo de selección
+  const [fechaInicio, setFechaInicio] = useState<Date>(new Date());
+  const [fechaFin, setFechaFin] = useState<Date>(endOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [modoSeleccion, setModoSeleccion] = useState<'semana' | 'dia' | 'rango'>('semana');
 
   // Cargar datos iniciales
   useEffect(() => {
     cargarDatosIniciales();
   }, []);
 
-  // Actualizar días de la semana
+  // Actualizar días de la semana cuando cambien las fechas o el modo
   useEffect(() => {
-    const fechasSemana = obtenerFechasSemana();
+    let fechasSemana: DiaSemana[] = [];
+    
+    if (modoSeleccion === 'semana') {
+      // En modo semana, obtener los 6 días (lunes a sábado)
+      fechasSemana = obtenerFechasSemana(fechaInicio);
+    } else if (modoSeleccion === 'dia') {
+      // En modo día, mostrar solo el día seleccionado
+      const diaSeleccionado = fechaInicio;
+      const nombreDia = format(diaSeleccionado, 'EEEE', { locale: { code: 'es' } });
+      
+      // Capitalizar primera letra
+      const nombreFormateado = nombreDia.charAt(0).toUpperCase() + nombreDia.slice(1);
+      
+      fechasSemana = [{
+        nombre: nombreFormateado,
+        fecha: format(diaSeleccionado, 'yyyy-MM-dd')
+      }];
+    } else if (modoSeleccion === 'rango') {
+      // En modo rango, generar todos los días entre fechaInicio y fechaFin
+      const dias: DiaSemana[] = [];
+      let fechaActual = new Date(fechaInicio);
+      
+      while (fechaActual <= fechaFin) {
+        const nombreDia = format(fechaActual, 'EEEE', { locale: { code: 'es' } });
+        const nombreFormateado = nombreDia.charAt(0).toUpperCase() + nombreDia.slice(1);
+        
+        dias.push({
+          nombre: nombreFormateado,
+          fecha: format(fechaActual, 'yyyy-MM-dd')
+        });
+        
+        // Avanzar al siguiente día
+        fechaActual.setDate(fechaActual.getDate() + 1);
+      }
+      
+      fechasSemana = dias;
+    }
+    
     setDiasSemana(fechasSemana);
-  }, []);
+  }, [fechaInicio, fechaFin, modoSeleccion]);
 
   // Cargar reportes cuando cambie la selección
   useEffect(() => {
@@ -58,6 +101,17 @@ export default function ControlTransmisiones() {
       cargarReportes();
     }
   }, [filialSeleccionada, programaSeleccionado, diasSemana]);
+
+  // Manejar cambios en el rango de fechas
+  const handleFechasChange = (inicio: Date, fin: Date) => {
+    setFechaInicio(inicio);
+    setFechaFin(fin);
+  };
+
+  // Manejar cambios en el modo de selección
+  const handleModoSeleccionChange = (modo: 'semana' | 'dia' | 'rango') => {
+    setModoSeleccion(modo);
+  };
 
   // Cargar datos desde la API
   const cargarDatosIniciales = async () => {
@@ -113,6 +167,9 @@ export default function ControlTransmisiones() {
       const fechaInicio = diasSemana[0].fecha;
       const fechaFin = diasSemana[diasSemana.length - 1].fecha;
       
+      // Mostrar indicador de carga para los reportes
+      setReportes([]); // Limpiar reportes existentes
+      
       const reportesData = await getReportesPorFechas(fechaInicio, fechaFin);
       setReportes(reportesData);
     } catch (err) {
@@ -120,25 +177,32 @@ export default function ControlTransmisiones() {
     }
   };
 
-  // Obtener programas de la filial seleccionada
-   const getProgramasDeFilial = () => {
+  const getProgramasDeFilial = () => {
     if (!filialSeleccionada) return [];
     
     const filial = filiales.find(f => Number(f.id) === filialSeleccionada);
     if (!filial) return [];
     
+    // Filtrar programas asociados a la filial y que tengan al menos un día configurado
     return programas.filter(p => {
       // Verificar si el programa está asociado a la filial
+      let estaAsociado = false;
+      
       // Primero verificar filialesIds (múltiples filiales)
       if (p.filialesIds && p.filialesIds.length > 0) {
-        return p.filialesIds.includes(filialSeleccionada);
+        estaAsociado = p.filialesIds.includes(filialSeleccionada);
       }
       // Luego verificar programaIds de la filial
-      if (filial.programaIds && filial.programaIds.includes(Number(p.id))) {
-        return true;
+      else if (filial.programaIds && filial.programaIds.includes(Number(p.id))) {
+        estaAsociado = true;
       }
       // Finalmente verificar filialId único (compatibilidad)
-      return Number(p.filialId) === filialSeleccionada;
+      else if (Number(p.filialId) === filialSeleccionada) {
+        estaAsociado = true;
+      }
+      
+      // Solo incluir el programa si está asociado a la filial Y tiene días de la semana configurados
+      return estaAsociado && p.diasSemana && p.diasSemana.length > 0;
     });
   };
 
@@ -147,20 +211,29 @@ export default function ControlTransmisiones() {
     setFilialSeleccionada(filialId);
     setProgramaSeleccionado(null);
     
-    // Seleccionar primer programa de la filial
+    // Seleccionar primer programa de la filial que tenga días configurados
     const programasFilial = programas.filter(p => {
       // Verificar si el programa está asociado a la filial
+      let estaAsociado = false;
+      
       // Primero verificar filialesIds (múltiples filiales)
       if (p.filialesIds && p.filialesIds.length > 0) {
-        return p.filialesIds.includes(filialId);
-      }
+        estaAsociado = p.filialesIds.includes(filialId);
+      } 
       // Luego verificar programaIds de la filial
-      const filial = filiales.find(f => Number(f.id) === filialId);
-      if (filial?.programaIds?.includes(Number(p.id))) {
-        return true;
+      else {
+        const filial = filiales.find(f => Number(f.id) === filialId);
+        if (filial?.programaIds?.includes(Number(p.id))) {
+          estaAsociado = true;
+        }
+        // Finalmente verificar filialId único (compatibilidad)
+        else if (Number(p.filialId) === filialId) {
+          estaAsociado = true;
+        }
       }
-      // Finalmente verificar filialId único (compatibilidad)
-      return Number(p.filialId) === filialId;
+      
+      // Solo incluir el programa si está asociado a la filial Y tiene días de la semana configurados
+      return estaAsociado && p.diasSemana && p.diasSemana.length > 0;
     });
     
     if (programasFilial.length > 0) {
@@ -185,8 +258,6 @@ export default function ControlTransmisiones() {
     
     if (!filial || !programa) return;
     
-    debug.log('Abriendo formulario con reporte:', reporte);
-    
     setTransmisionEditar({
       filialId,
       programaId,
@@ -198,23 +269,10 @@ export default function ControlTransmisiones() {
       reporteId: reporte?.id_reporte
     });
     
-    // Configurar estado inicial del formulario con más detalle para debugging
-    if (reporte) {
-      debug.log('Inicializando formulario con reporte existente:', {
-        estado: reporte.estado,
-        hora: reporte.hora,
-        horaReal: reporte.horaReal,
-        hora_tt: reporte.hora_tt,
-        target: reporte.target,
-        motivo: reporte.motivo
-      });
-      
-      // Preprocesamiento especial para reportes con motivo personalizado
-      if (reporte.motivo && !reporte.target) {
-        // Si hay un motivo pero no target, establecer target como "Otros"
-        debug.log('Preprocesando reporte con motivo pero sin target');
-        reporte.target = 'Otros';
-      }
+    // Preprocesamiento especial para reportes con motivo personalizado
+    if (reporte && reporte.motivo && !reporte.target) {
+      // Si hay un motivo pero no target, establecer target como "Otros"
+      reporte.target = 'Otros';
     }
     
     setReporteActual(reporte);
@@ -234,8 +292,6 @@ export default function ControlTransmisiones() {
     try {
       setGuardando(true);
       setError(null);
-      
-      debug.log('Procesando datos de formulario:', datosForm);
       
       // Preparar datos del reporte
       const datosReporte: any = {
@@ -314,8 +370,6 @@ export default function ControlTransmisiones() {
         datosReporte.motivo = null;
       }
       
-      debug.log('Enviando datos al servidor:', datosReporte);
-      
       // Guardar en la API
       await guardarOActualizarReporte(
         transmisionEditar.filialId,
@@ -346,6 +400,7 @@ export default function ControlTransmisiones() {
 
   // Verificar si un programa se transmite en un día
   const programaTransmiteEnDia = (programa: Programa, diaNombre: string): boolean => {
+    // Si el programa no tiene días definidos, considerar que no se transmite
     if (!programa.diasSemana || programa.diasSemana.length === 0) {
       return false;
     }
@@ -403,6 +458,17 @@ export default function ControlTransmisiones() {
           </div>
         </div>
       )}
+
+      {/* Selector de semanas mejorado */}
+      <div className="px-6 py-3">
+        <SelectorSemanasMejorado 
+          fechaInicio={fechaInicio}
+          fechaFin={fechaFin}
+          onFechasChange={handleFechasChange}
+          modoSeleccion={modoSeleccion}
+          onModoSeleccionChange={handleModoSeleccionChange}
+        />
+      </div>
 
       {/* Leyenda */}
       <div className="bg-white border-b border-gray-200 py-2 px-4 flex items-center space-x-6 text-sm">
@@ -488,7 +554,10 @@ export default function ControlTransmisiones() {
               <div className="p-6">
                 {/* Días de la semana */}
                 <div className="grid grid-cols-6 gap-4 mb-4">
-                  {diasSemana.map((dia, idx) => (
+                  {diasSemana.filter(dia => {
+                    const programa = programas.find(p => Number(p.id) === programaSeleccionado);
+                    return programa && programaTransmiteEnDia(programa, dia.nombre);
+                  }).map((dia, idx) => (
                     <div key={idx} className="text-center">
                       <div className="font-medium text-gray-800">{dia.nombre}</div>
                       <div className="text-xs text-gray-500">{dia.fecha}</div>
@@ -505,13 +574,7 @@ export default function ControlTransmisiones() {
                     const transmiteEnDia = programaTransmiteEnDia(programa, dia.nombre);
                     
                     if (!transmiteEnDia) {
-                      return (
-                        <div key={idx} className="flex justify-center items-center">
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">
-                            No programado
-                          </div>
-                        </div>
-                      );
+                      return null; // No mostrar nada para los días no programados
                     }
                     
                     const reporte = getReporte(

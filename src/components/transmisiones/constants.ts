@@ -1,5 +1,6 @@
 // src/components/transmisiones/constants.ts
 import { DiaSemana } from './types';
+import { startOfWeek, addDays, format } from 'date-fns';
 
 // Ya no necesitamos CIUDADES porque vendrán de la API (filiales)
 
@@ -49,22 +50,17 @@ export const ESTADOS_TRANSMISION = {
   TRANSMITIO_TARDE: 'tarde'
 } as const;
 
-// Función para obtener las fechas de la semana actual
-export const obtenerFechasSemana = (): DiaSemana[] => {
-  const hoy = new Date();
-  const diaSemana = hoy.getDay();
-  const lunes = new Date(hoy);
-  
-  // Ajustar al lunes de esta semana
-  lunes.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1));
+// Función para obtener las fechas de la semana a partir de una fecha dada
+export const obtenerFechasSemana = (fecha: Date = new Date()): DiaSemana[] => {
+  // Obtener el lunes de la semana
+  const lunes = startOfWeek(fecha, { weekStartsOn: 1 });
   
   return DIAS_SEMANA.map((dia, index) => {
-    const fecha = new Date(lunes);
-    fecha.setDate(lunes.getDate() + index);
+    const fechaDia = addDays(lunes, index);
     
-    const dd = String(fecha.getDate()).padStart(2, '0');
-    const mm = String(fecha.getMonth() + 1).padStart(2, '0');
-    const yyyy = fecha.getFullYear();
+    const dd = String(fechaDia.getDate()).padStart(2, '0');
+    const mm = String(fechaDia.getMonth() + 1).padStart(2, '0');
+    const yyyy = fechaDia.getFullYear();
     
     return {
       ...dia,
