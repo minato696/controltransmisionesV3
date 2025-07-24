@@ -11,6 +11,7 @@ import {
 import { Filial, Programa, Reporte } from '@/components/transmisiones/types';
 import { normalizarDiaSemana } from '@/components/transmisiones/constants';
 import SelectorSemanasMejorado from '@/components/transmisiones/SelectorSemanasMejorado';
+import ExportComponent from '@/components/exportacion/ExportComponent';
 
 export default function DashboardGeneral() {
   // Estados
@@ -22,6 +23,10 @@ export default function DashboardGeneral() {
   const [diasSemana, setDiasSemana] = useState<string[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filialSeleccionada, setFilialSeleccionada] = useState<number | null>(null);
+  
+  // Manejar scroll en dispositivos móviles
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -120,6 +125,11 @@ export default function DashboardGeneral() {
     setFechaFin(fin);
   };
 
+  // Filtrar por filial específica
+  const handleFilialSelect = (filialId: number) => {
+    setFilialSeleccionada(filialId === filialSeleccionada ? null : filialId);
+  };
+
   // Verificar si un programa se transmite en un día específico
   const programaTransmiteEnDia = (programa: Programa, fecha: string) => {
     if (!programa.diasSemana || programa.diasSemana.length === 0) return false;
@@ -187,6 +197,7 @@ export default function DashboardGeneral() {
   const reportesNo = reportes.filter(r => r.estado === 'no').length;
   const reportesTarde = reportes.filter(r => r.estado === 'tarde').length;
   const reportesPendientes = reportes.filter(r => !r.estado || r.estado === 'pendiente').length;
+  const efectividad = totalReportes > 0 ? Math.round((reportesSi / totalReportes) * 100) : 0;
   
   // Renderizar estado de carga
   if (cargando && filiales.length === 0) {
@@ -204,6 +215,23 @@ export default function DashboardGeneral() {
     <div className="min-h-screen flex flex-col">
       {/* Tarjetas de estadísticas */}
       <div className="container mx-auto px-4 py-4">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-xl font-bold">Dashboard de Control de Transmisiones</h1>
+          
+          <div className="flex items-center gap-2">
+            {/* Botón de exportación */}
+<ExportComponent 
+  reportes={reportes}
+  filiales={filiales}
+  programas={programas}
+  fechaInicio={fechaInicio}
+  fechaFin={fechaFin}
+  filialSeleccionada={filialSeleccionada}
+  modoDetallado={true}  // Forzar el modo detallado para el Dashboard
+/>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="bg-white rounded-lg shadow p-4">
             <div className="text-sm font-medium text-gray-500">Filiales</div>
@@ -245,7 +273,7 @@ export default function DashboardGeneral() {
       </div>
 
       {/* Contenido principal: Tabla */}
-      <div className="container mx-auto px-4 py-4 flex-1">
+      <div className="container mx-auto px-4 py-4 flex-1 overflow-hidden">
         {/* Contenido principal - Siempre muestra todas las filiales */}
         <div className="bg-white shadow-md rounded-lg overflow-hidden">
           {/* Leyenda */}
@@ -273,9 +301,42 @@ export default function DashboardGeneral() {
             </div>
           </div>
           
+          {/* Filtro de filiales */}
+          <div className="p-3 bg-white border-b">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Filtrar por filial:
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {filiales.map(filial => (
+                <button
+                  key={filial.id}
+                  onClick={() => handleFilialSelect(Number(filial.id))}
+                  className={`px-3 py-1 text-sm rounded-full ${
+                    filialSeleccionada === Number(filial.id)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+                >
+                  {filial.nombre}
+                </button>
+              ))}
+              {filialSeleccionada && (
+                <button
+                  onClick={() => setFilialSeleccionada(null)}
+                  className="px-3 py-1 text-sm rounded-full bg-red-100 text-red-800 hover:bg-red-200 flex items-center"
+                >
+                  <span>Limpiar filtro</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+          
           {/* Tabla de transmisiones - Vista del resumen general */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse">
+          <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
+            <table className="min-w-full border-collapse sticky-header sticky-first-column">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-b border-r">
@@ -290,7 +351,9 @@ export default function DashboardGeneral() {
                 </tr>
               </thead>
               <tbody>
-                {filiales.map(filial => (
+                {filiales
+                  .filter(filial => filialSeleccionada ? Number(filial.id) === filialSeleccionada : true)
+                  .map(filial => (
                   <React.Fragment key={filial.id}>
                     {/* Encabezado de la filial */}
                     <tr className="bg-gray-50">
@@ -333,6 +396,7 @@ export default function DashboardGeneral() {
                               >
                                 {reporte?.estado === 'si' && <span className="text-white">✓</span>}
                                 {reporte?.estado === 'no' && <span className="text-white">✕</span>}
+                                {reporte?.estado === 'tarde' && <span className="text-white">⏰</span>}
                               </div>
                             </td>
                           );

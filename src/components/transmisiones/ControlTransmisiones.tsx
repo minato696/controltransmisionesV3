@@ -23,12 +23,13 @@ import {
 import { endOfWeek, startOfWeek, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-// Importamos los componentes nuevos
+// Importamos los componentes
 import TransmisionTooltip from './TransmisionTooltip';
 import ReporteForm from './ReporteForm';
 import SelectorSemanasMejorado from './SelectorSemanasMejorado';
 import VistaReportesDiaSemanalStyle from './VistaReportesDiaSemanalStyle';
 import DashboardGeneral from '@/components/dashboard/DashboardGeneral';
+import ExportComponent from '@/components/exportacion/ExportComponent';
 
 export default function ControlTransmisiones() {
   // Estados principales
@@ -51,6 +52,8 @@ export default function ControlTransmisiones() {
   const [modoSeleccion, setModoSeleccion] = useState<'semana' | 'dia' | 'rango'>('semana');
   // Estado para alternar entre vista normal y resumen general
   const [mostrarResumen, setMostrarResumen] = useState<boolean>(true);
+  // Estado para controlar la visibilidad de la barra lateral en móviles
+  const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -453,9 +456,19 @@ export default function ControlTransmisiones() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 font-sans">
+    <div className="flex flex-col h-screen bg-gray-50 font-sans overflow-hidden">
       {/* Barra superior */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 flex items-center shadow-md">
+        {/* Botón de menú para móviles */}
+        <button 
+          className="md:hidden p-2 mr-2 rounded-md text-white hover:bg-blue-800"
+          onClick={() => setSidebarVisible(!sidebarVisible)}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        
         <div className="flex items-center text-lg font-semibold">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -473,6 +486,19 @@ export default function ControlTransmisiones() {
               "Sistema de Control de Transmisiones"
             )}
           </span>
+        </div>
+        
+        {/* Botón de exportación - colocado a la derecha */}
+        <div className="ml-auto">
+<ExportComponent 
+  reportes={reportes}
+  filiales={filiales}
+  programas={programas}
+  fechaInicio={fechaInicio}
+  fechaFin={fechaFin}
+  filialSeleccionada={filialSeleccionada}
+  modoDetallado={true}  // Forzar el modo detallado
+/>
         </div>
       </div>
 
@@ -561,7 +587,14 @@ export default function ControlTransmisiones() {
       {/* Contenedor principal */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - Menú de filiales */}
-        <div className="w-64 bg-white shadow-md z-10 overflow-y-auto flex-shrink-0">
+        <div 
+          className={`
+            w-64 bg-white shadow-md z-10 overflow-y-auto flex-shrink-0 max-h-screen
+            transition-all duration-300
+            ${sidebarVisible ? 'translate-x-0' : '-translate-x-full'}
+            md:translate-x-0 fixed md:relative h-screen
+          `}
+        >
           {/* Opción de Resumen General en el menú lateral */}
           <div
             className={`flex justify-between px-6 py-3 cursor-pointer hover:bg-blue-50 transition-colors border-b-2 ${
@@ -583,7 +616,9 @@ export default function ControlTransmisiones() {
           <div className="py-4 px-6 text-lg font-bold text-gray-800 border-b border-gray-100">
             Filiales
           </div>
-          <div className="py-2">
+          
+          {/* Lista de filiales con scroll mejorado */}
+          <div className="py-2 overflow-y-auto max-h-[calc(100vh-120px)] custom-scrollbar">
             {filiales.length === 0 ? (
               <div className="px-6 py-8 text-center text-gray-500">
                 <p className="text-sm">No hay filiales disponibles</p>
@@ -598,6 +633,11 @@ export default function ControlTransmisiones() {
                   onClick={() => {
                     setMostrarResumen(false);
                     handleFilialClick(Number(filial.id));
+                    
+                    // En móviles, cerrar el sidebar después de seleccionar
+                    if (window.innerWidth < 768) {
+                      setSidebarVisible(false);
+                    }
                   }}
                 >
                   <div className={filialSeleccionada === Number(filial.id) && !mostrarResumen ? "text-blue-700" : "text-gray-700"}>
@@ -613,10 +653,10 @@ export default function ControlTransmisiones() {
         </div>
 
         {/* Contenido principal */}
-        <div className={`flex-1 flex flex-col ${mostrarResumen ? 'overflow-hidden' : 'overflow-hidden'}`}>
+        <div className="flex-1 flex flex-col overflow-hidden">
           {/* Pestañas de programas - mostrar solo si hay filial seleccionada y no estamos en resumen */}
           {filialSeleccionada && !mostrarResumen && (
-            <div className="bg-white border-b border-gray-200 overflow-x-auto shadow-sm">
+            <div className="bg-white border-b border-gray-200 overflow-x-auto shadow-sm custom-scrollbar">
               <div className="flex px-4">
                 {getProgramasDeFilial().map((prog) => (
                   <button
@@ -637,7 +677,7 @@ export default function ControlTransmisiones() {
           )}
 
           {/* Tabla de días y estados o Resumen General */}
-          <div className={`${mostrarResumen ? 'h-full' : 'flex-1 overflow-auto'}`}>
+          <div className="h-full overflow-auto custom-scrollbar">
             {/* Mostrar el componente de Resumen General si está seleccionado */}
             {mostrarResumen ? (
               <div className="h-full overflow-auto">
@@ -729,82 +769,86 @@ export default function ControlTransmisiones() {
                   </div>
                 ) : (
                   <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <table className="min-w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filial</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Programa</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {/* Tabla de reportes por rango */}
-                        {reportes.map((reporte) => {
-                          const filial = filiales.find(f => Number(f.id) === reporte.filialId);
-                          const programa = programas.find(p => Number(p.id) === reporte.programaId);
-                          
-                          // Determinar color según estado
-                          let bgColor = "bg-gray-200";
-                          if (reporte.estado === 'si') bgColor = "bg-emerald-500";
-                          else if (reporte.estado === 'no') bgColor = "bg-red-500";
-                          else if (reporte.estado === 'tarde') bgColor = "bg-amber-500";
-                          
-                          // Formatear fecha para mostrar
-                          const fechaFormateada = new Date(reporte.fecha);
-                          
-                          return (
-                            <tr key={reporte.id_reporte}>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">
-                                  {format(fechaFormateada, "EEE d MMM", { locale: es })}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{filial?.nombre || 'Desconocida'}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{programa?.nombre || 'Desconocido'}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">
-                                  {reporte.horaReal || reporte.hora || '-'}
-                                  {reporte.estado === 'tarde' && reporte.hora_tt && (
-                                    <span className="text-xs text-gray-500 ml-2">→ {reporte.hora_tt}</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${bgColor} text-white`}>
-                                  {reporte.estado === 'si' ? 'Transmitió' : 
-                                   reporte.estado === 'no' ? 'No transmitió' : 
-                                   reporte.estado === 'tarde' ? 'Transmitió tarde' : 'Pendiente'}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button
-                                  onClick={() => {
-                                    const dia = format(fechaFormateada, "EEEE", { locale: es });
-                                    const diaFormateado = dia.charAt(0).toUpperCase() + dia.slice(1);
-                                    abrirFormulario(
-                                      reporte.filialId,
-                                      reporte.programaId,
-                                      diaFormateado,
-                                      reporte.fecha
-                                    );
-                                  }}
-                                  className="text-indigo-600 hover:text-indigo-900"
-                                >
-                                  Editar
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                    <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
+                      <table className="min-w-full sticky-header sticky-first-column">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filial</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Programa</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {/* Tabla de reportes por rango */}
+                          {reportes.filter(r => 
+                            filialSeleccionada ? r.filialId === filialSeleccionada : true
+                          ).map((reporte) => {
+                            const filial = filiales.find(f => Number(f.id) === reporte.filialId);
+                            const programa = programas.find(p => Number(p.id) === reporte.programaId);
+                            
+                            // Determinar color según estado
+                            let bgColor = "bg-gray-200";
+                            if (reporte.estado === 'si') bgColor = "bg-emerald-500";
+                            else if (reporte.estado === 'no') bgColor = "bg-red-500";
+                            else if (reporte.estado === 'tarde') bgColor = "bg-amber-500";
+                            
+                            // Formatear fecha para mostrar
+                            const fechaFormateada = new Date(reporte.fecha);
+                            
+                            return (
+                              <tr key={reporte.id_reporte}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900">
+                                    {format(fechaFormateada, "EEE d MMM", { locale: es })}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900">{filial?.nombre || 'Desconocida'}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900">{programa?.nombre || 'Desconocido'}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900">
+                                    {reporte.horaReal || reporte.hora || '-'}
+                                    {reporte.estado === 'tarde' && reporte.hora_tt && (
+                                      <span className="text-xs text-gray-500 ml-2">→ {reporte.hora_tt}</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${bgColor} text-white`}>
+                                    {reporte.estado === 'si' ? 'Transmitió' : 
+                                     reporte.estado === 'no' ? 'No transmitió' : 
+                                     reporte.estado === 'tarde' ? 'Transmitió tarde' : 'Pendiente'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                  <button
+                                    onClick={() => {
+                                      const dia = format(fechaFormateada, "EEEE", { locale: es });
+                                      const diaFormateado = dia.charAt(0).toUpperCase() + dia.slice(1);
+                                      abrirFormulario(
+                                        reporte.filialId,
+                                        reporte.programaId,
+                                        diaFormateado,
+                                        reporte.fecha
+                                      );
+                                    }}
+                                    className="text-indigo-600 hover:text-indigo-900"
+                                  >
+                                    Editar
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
