@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfWeek, endOfWeek, addDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import Link from 'next/link';
 import { 
   getFiliales, 
   getProgramas, 
@@ -23,8 +22,6 @@ export default function DashboardGeneral() {
   const [diasSemana, setDiasSemana] = useState<string[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [modoVisualizacion, setModoVisualizacion] = useState<'resumido' | 'detallado'>('resumido');
-  const [filtroPrograma, setFiltroPrograma] = useState<string>('');
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -205,14 +202,6 @@ export default function DashboardGeneral() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Encabezado principal (azul) */}
-      <header className="bg-blue-600 text-white p-4">
-        <div className="container mx-auto">
-          <h1 className="text-2xl font-bold">Dashboard de Transmisiones</h1>
-          <p className="text-blue-100">Vista general del estado de las transmisiones</p>
-        </div>
-      </header>
-
       {/* Tarjetas de estadísticas */}
       <div className="container mx-auto px-4 py-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -255,30 +244,10 @@ export default function DashboardGeneral() {
         </div>
       </div>
 
-      {/* Contenido principal: Menú lateral + Tabla */}
-      <div className="container mx-auto px-4 py-4 flex-1 flex">
-        {/* Menú lateral izquierdo - Simplificado */}
-        <div className="w-64 bg-white shadow-md overflow-hidden rounded-lg mr-4">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="font-bold text-gray-800">Filiales</h2>
-          </div>
-          <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
-            {/* Solo la opción de Resumen General */}
-            <div 
-              className="px-4 py-3 cursor-pointer border-b border-gray-200 bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-600 font-bold"
-            >
-              <div className="flex items-center text-blue-600">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Resumen General
-              </div>
-            </div>
-          </div>
-        </div>
-
+      {/* Contenido principal: Tabla */}
+      <div className="container mx-auto px-4 py-4 flex-1">
         {/* Contenido principal - Siempre muestra todas las filiales */}
-        <div className="flex-1 bg-white shadow-md rounded-lg overflow-hidden">
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
           {/* Leyenda */}
           <div className="p-3 bg-gray-50 border-b flex items-center space-x-4 overflow-x-auto">
             <div className="font-medium text-gray-700 whitespace-nowrap">Leyenda:</div>
