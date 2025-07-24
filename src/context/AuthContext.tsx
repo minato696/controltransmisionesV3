@@ -8,6 +8,7 @@ interface AuthContextType {
   logout: () => void;
   user: string | null;
   error: string | null;
+  isInitialized: boolean; // Nueva propiedad para saber si ya se inicializó
 }
 
 // Crear el contexto
@@ -25,6 +26,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false); // Nuevo estado
 
   // Check if user is already logged in on mount
   useEffect(() => {
@@ -43,6 +45,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.removeItem('auth');
         }
       }
+      // Marcar como inicializado después de verificar localStorage
+      setIsInitialized(true);
     }
   }, []);
 
@@ -89,7 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, user, error }}>
+    <AuthContext.Provider value={{ isAuthenticated, login, logout, user, error, isInitialized }}>
       {children}
     </AuthContext.Provider>
   );

@@ -16,6 +16,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Sistema Control de Transmisiones - Radio Exitosa",
   description: "Plataforma para el control de transmisiones de Radio Exitosa",
+  icons: {
+    icon: [
+      {
+        url: "https://statics.exitosanoticias.pe/exitosa/img/global/favicon.png",
+        href: "https://statics.exitosanoticias.pe/exitosa/img/global/favicon.png",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -25,6 +33,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
+      <head>
+        <link 
+          rel="icon" 
+          href="https://statics.exitosanoticias.pe/exitosa/img/global/favicon.png" 
+          type="image/png"
+        />
+        <link 
+          rel="shortcut icon" 
+          href="https://statics.exitosanoticias.pe/exitosa/img/global/favicon.png" 
+          type="image/png"
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

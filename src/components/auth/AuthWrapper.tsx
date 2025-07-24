@@ -11,7 +11,7 @@ interface AuthWrapperProps {
 const PUBLIC_PATHS = ['/login'];
 
 export default function AuthWrapper({ children }: AuthWrapperProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitialized } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -23,6 +23,11 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
   const isDashboardView = viewParam === 'dashboard';
 
   useEffect(() => {
+    // No hacer nada hasta que el estado de autenticación esté inicializado
+    if (!isInitialized) {
+      return;
+    }
+
     // Verificar si estamos en una ruta pública
     const isPublicPath = PUBLIC_PATHS.includes(pathname);
     
@@ -45,9 +50,9 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
     }
     
     setIsChecking(false);
-  }, [isAuthenticated, pathname, router, isDashboardView]);
+  }, [isAuthenticated, isInitialized, pathname, router, isDashboardView, searchParams]);
 
-  if (isChecking) {
+  if (!isInitialized || isChecking) {
     // Mostrar estado de carga mientras se verifica la autenticación
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">

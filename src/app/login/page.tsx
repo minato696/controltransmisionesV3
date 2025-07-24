@@ -8,16 +8,21 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, error, isAuthenticated } = useAuth();
+  const { login, error, isAuthenticated, isInitialized } = useAuth();
   const router = useRouter();
 
   // Use useEffect to handle redirects instead of during rendering
   useEffect(() => {
+    // No hacer nada hasta que el estado de autenticación esté inicializado
+    if (!isInitialized) {
+      return;
+    }
+
     // If already authenticated, redirect to dashboard
     if (isAuthenticated) {
       router.push('/');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +36,30 @@ export default function LoginPage() {
       router.push('/');
     }
   };
+
+  // Si está cargando la inicialización, mostrar spinner
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Verificando sesión...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No mostrar el login si ya está autenticado (evitar parpadeo)
+  if (isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Redireccionando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
