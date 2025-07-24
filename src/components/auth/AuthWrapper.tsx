@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 interface AuthWrapperProps {
@@ -14,29 +14,41 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isChecking, setIsChecking] = useState(true);
   const [shouldRender, setShouldRender] = useState(false);
 
+  // Obtener el parámetro de vista para identificar si estamos en modo dashboard
+  const viewParam = searchParams.get('view');
+  const isDashboardView = viewParam === 'dashboard';
+
   useEffect(() => {
-    // Check if we're on a public path
+    // Verificar si estamos en una ruta pública
     const isPublicPath = PUBLIC_PATHS.includes(pathname);
     
+    // Si es la vista del dashboard, permitir acceso (será manejado dentro del componente)
+    if (isDashboardView && pathname === '/') {
+      setIsChecking(false);
+      setShouldRender(true);
+      return;
+    }
+    
     if (!isAuthenticated && !isPublicPath) {
-      // Redirect to login if not authenticated and not on a public path
+      // Redirigir a login si no está autenticado y no es una ruta pública
       router.push('/login');
     } else if (isAuthenticated && isPublicPath) {
-      // Redirect to home if authenticated and on a public path
+      // Redirigir a home si está autenticado y está en una ruta pública
       router.push('/');
     } else {
-      // If no redirect is needed, render the children
+      // Si no se necesita redirección, renderizar los hijos
       setShouldRender(true);
     }
     
     setIsChecking(false);
-  }, [isAuthenticated, pathname, router]);
+  }, [isAuthenticated, pathname, router, isDashboardView]);
 
   if (isChecking) {
-    // Show loading state while checking authentication
+    // Mostrar estado de carga mientras se verifica la autenticación
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="text-center">
@@ -47,7 +59,7 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
     );
   }
 
-  // Only render children if we've determined it's safe to do so
+  // Solo renderizar hijos si es seguro hacerlo
   return shouldRender ? <>{children}</> : (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="text-center">

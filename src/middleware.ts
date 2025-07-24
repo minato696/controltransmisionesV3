@@ -13,8 +13,13 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith(`${path}/`)
   );
   
-  // Para rutas API, permitir siempre el acceso
-  if (request.nextUrl.pathname.startsWith('/api/')) {
+  // Verificar si es la ruta principal con el parámetro de dashboard
+  const isDashboardView = 
+    request.nextUrl.pathname === '/' && 
+    request.nextUrl.searchParams.get('view') === 'dashboard';
+  
+  // Para rutas API o para la vista de dashboard, permitir siempre el acceso
+  if (request.nextUrl.pathname.startsWith('/api/') || isDashboardView) {
     return NextResponse.next();
   }
   

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfWeek, endOfWeek, addDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useRouter } from 'next/navigation';
 import { 
   getFiliales, 
   getProgramas, 
@@ -12,6 +13,7 @@ import { Filial, Programa, Reporte } from '@/components/transmisiones/types';
 import { normalizarDiaSemana } from '@/components/transmisiones/constants';
 import SelectorSemanasMejorado from '@/components/transmisiones/SelectorSemanasMejorado';
 import ExportComponent from '@/components/exportacion/ExportComponent';
+import { useAuth } from '@/context/AuthContext';
 
 export default function DashboardGeneral() {
   // Estados
@@ -24,26 +26,48 @@ export default function DashboardGeneral() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filialSeleccionada, setFilialSeleccionada] = useState<number | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   
   // Manejar scroll en dispositivos móviles
   const [sidebarVisible, setSidebarVisible] = useState(false);
 
-  // Cargar datos iniciales
+  // Obtener estado de autenticación
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // Verificar que la autenticación esté lista
   useEffect(() => {
-    cargarDatos();
-  }, []);
+    if (isAuthenticated) {
+      setAuthReady(true);
+    } else {
+      // Pequeño timeout para asegurar que el contexto de autenticación se ha inicializado
+      const timer = setTimeout(() => {
+        setAuthReady(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated]);
+
+  // Cargar datos iniciales solo si está autenticado
+  useEffect(() => {
+    if (authReady && isAuthenticated) {
+      cargarDatos();
+    }
+  }, [authReady, isAuthenticated]);
 
   // Generar días de la semana cuando cambian las fechas
   useEffect(() => {
-    generarDiasSemana();
-  }, [fechaInicio, fechaFin]);
+    if (authReady && isAuthenticated) {
+      generarDiasSemana();
+    }
+  }, [fechaInicio, fechaFin, authReady, isAuthenticated]);
 
   // Cargar reportes cuando cambian las fechas
   useEffect(() => {
-    if (diasSemana.length > 0) {
+    if (authReady && isAuthenticated && diasSemana.length > 0) {
       cargarReportes();
     }
-  }, [diasSemana]);
+  }, [diasSemana, authReady, isAuthenticated]);
 
   // Función para cargar todos los datos necesarios
   const cargarDatos = async () => {
@@ -199,8 +223,26 @@ export default function DashboardGeneral() {
   const reportesPendientes = reportes.filter(r => !r.estado || r.estado === 'pendiente').length;
   const efectividad = totalReportes > 0 ? Math.round((reportesSi / totalReportes) * 100) : 0;
   
+  // Si no está autenticado, mostrar mensaje para que inicie sesión
+  if (authReady && !isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center max-w-md p-6 bg-white rounded-lg shadow-lg">
+          <h2 className="text-xl font-semibold mb-4">Acceso no autorizado</h2>
+          <p className="mb-6">Por favor, inicie sesión para acceder al dashboard.</p>
+          <button
+            onClick={() => router.push('/login')}
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+          >
+            Iniciar sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
   // Renderizar estado de carga
-  if (cargando && filiales.length === 0) {
+  if ((cargando && filiales.length === 0) || !authReady) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
@@ -213,6 +255,19 @@ export default function DashboardGeneral() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Botón para volver */}
+      <div className="container mx-auto px-4 py-2">
+        <button
+          onClick={() => router.push('/')}
+          className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition-colors flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Volver a Control de Transmisiones
+        </button>
+      </div>
+      
       {/* Tarjetas de estadísticas */}
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center mb-4">
@@ -220,15 +275,15 @@ export default function DashboardGeneral() {
           
           <div className="flex items-center gap-2">
             {/* Botón de exportación */}
-<ExportComponent 
-  reportes={reportes}
-  filiales={filiales}
-  programas={programas}
-  fechaInicio={fechaInicio}
-  fechaFin={fechaFin}
-  filialSeleccionada={filialSeleccionada}
-  modoDetallado={true}  // Forzar el modo detallado para el Dashboard
-/>
+            <ExportComponent 
+              reportes={reportes}
+              filiales={filiales}
+              programas={programas}
+              fechaInicio={fechaInicio}
+              fechaFin={fechaFin}
+              filialSeleccionada={filialSeleccionada}
+              modoDetallado={true}  // Forzar el modo detallado para el Dashboard
+            />
           </div>
         </div>
 
@@ -419,8 +474,6 @@ export default function DashboardGeneral() {
           </div>
         </div>
       </div>
-
-
     </div>
   );
 }
