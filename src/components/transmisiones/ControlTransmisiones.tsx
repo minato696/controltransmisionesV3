@@ -109,11 +109,11 @@ export default function ControlTransmisiones() {
     if (modoSeleccion === 'dia') {
       cargarReportes();
     } 
-    // En modo semana o rango, cargar reportes cuando haya filial y programa seleccionados
-    else if ((filialSeleccionada || programaSeleccionado) && diasSemana.length > 0) {
+    // En modo semana o rango, cargar reportes cuando haya filial seleccionada
+    else if (filialSeleccionada && diasSemana.length > 0) {
       cargarReportes();
     }
-  }, [filialSeleccionada, programaSeleccionado, diasSemana, fechaInicio, modoSeleccion]);
+  }, [filialSeleccionada, diasSemana, fechaInicio, modoSeleccion]);
 
   // Manejar cambios en el rango de fechas
   const handleFechasChange = (inicio: Date, fin: Date) => {
@@ -205,7 +205,7 @@ export default function ControlTransmisiones() {
     if (!filial) return [];
     
     // Filtrar programas asociados a la filial y que tengan al menos un día configurado
-    return programas.filter(p => {
+    const programasFiltrados = programas.filter(p => {
       // Verificar si el programa está asociado a la filial
       let estaAsociado = false;
       
@@ -225,40 +225,48 @@ export default function ControlTransmisiones() {
       // Solo incluir el programa si está asociado a la filial Y tiene días de la semana configurados
       return estaAsociado && p.diasSemana && p.diasSemana.length > 0;
     });
+    
+    // Ordenar programas por hora (de más temprano a más tarde)
+    return programasFiltrados.sort((a, b) => {
+      // Primero verificar si alguno es programa de sábado (éstos van al final)
+      const aEsSabado = a.nombre.includes('(SÁBADO)') || a.nombre.includes('(SABADO)');
+      const bEsSabado = b.nombre.includes('(SÁBADO)') || b.nombre.includes('(SABADO)');
+      
+      // Si uno es de sábado y el otro no, el de sábado va después
+      if (aEsSabado && !bEsSabado) return 1;
+      if (!aEsSabado && bEsSabado) return -1;
+      
+      // Si ambos son de sábado o ninguno lo es, ordenar por hora
+      // Convertir hora a minutos para comparar
+      const convertirHoraAMinutos = (hora: string) => {
+        if (!hora) return 24*60; // Si no hay hora, ponerlo al final
+        
+        const partes = hora.split(':');
+        if (partes.length !== 2) return 24*60;
+        
+        const horas = parseInt(partes[0], 10);
+        const minutos = parseInt(partes[1], 10);
+        
+        return horas * 60 + minutos;
+      };
+      
+      const minutosA = convertirHoraAMinutos(a.horario || a.horaInicio || '');
+      const minutosB = convertirHoraAMinutos(b.horario || b.horaInicio || '');
+      
+      return minutosA - minutosB;
+    });
   };
 
   // Manejar cambio de filial
   const handleFilialClick = (filialId: number) => {
     setFilialSeleccionada(filialId);
+    // Ya no necesitamos seleccionar un programa específico, ya que mostraremos todos
     setProgramaSeleccionado(null);
+    setMostrarResumen(false);
     
-    // Seleccionar primer programa de la filial que tenga días configurados
-    const programasFilial = programas.filter(p => {
-      // Verificar si el programa está asociado a la filial
-      let estaAsociado = false;
-      
-      // Primero verificar filialesIds (múltiples filiales)
-      if (p.filialesIds && p.filialesIds.length > 0) {
-        estaAsociado = p.filialesIds.includes(filialId);
-      } 
-      // Luego verificar programaIds de la filial
-      else {
-        const filial = filiales.find(f => Number(f.id) === filialId);
-        if (filial?.programaIds?.includes(Number(p.id))) {
-          estaAsociado = true;
-        }
-        // Finalmente verificar filialId único (compatibilidad)
-        else if (Number(p.filialId) === filialId) {
-          estaAsociado = true;
-        }
-      }
-      
-      // Solo incluir el programa si está asociado a la filial Y tiene días de la semana configurados
-      return estaAsociado && p.diasSemana && p.diasSemana.length > 0;
-    });
-    
-    if (programasFilial.length > 0) {
-      setProgramaSeleccionado(Number(programasFilial[0].id));
+    // En móviles, cerrar el sidebar después de seleccionar
+    if (window.innerWidth < 768) {
+      setSidebarVisible(false);
     }
   };
 
@@ -433,6 +441,12 @@ export default function ControlTransmisiones() {
       return false;
     }
     
+    // Caso especial para programas que contienen "(SÁBADO)" en su nombre
+    if (programa.nombre.includes('(SÁBADO)') || programa.nombre.includes('(SABADO)')) {
+      // Si el programa es específico para sábado, solo debe transmitir en sábado
+      return diaNombre.toUpperCase() === 'SÁBADO' || diaNombre.toUpperCase() === 'SABADO';
+    }
+    
     // Normalizar el nombre del día para la comparación
     const diaNormalizado = normalizarDiaSemana(diaNombre);
     
@@ -470,16 +484,10 @@ export default function ControlTransmisiones() {
         </button>
         
         <div className="flex items-center text-lg font-semibold">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <img src="https://statics.exitosanoticias.pe/exitosa/img/global/exitosa.svg" alt="Exitosa" className="h-6 mr-2" />
           <span>
-            {programaSeleccionado && filialSeleccionada && !mostrarResumen ? (
-              <>
-                {filiales.find(f => Number(f.id) === filialSeleccionada)?.nombre} - {programas.find(p => Number(p.id) === programaSeleccionado)?.nombre}
-              </>
-            ) : programaSeleccionado && !mostrarResumen ? (
-              programas.find(p => Number(p.id) === programaSeleccionado)?.nombre
+            {filialSeleccionada && !mostrarResumen ? (
+              filiales.find(f => Number(f.id) === filialSeleccionada)?.nombre
             ) : mostrarResumen ? (
               "Resumen General"
             ) : (
@@ -488,18 +496,8 @@ export default function ControlTransmisiones() {
           </span>
         </div>
         
-        {/* Botón de exportación - colocado a la derecha */}
-        <div className="ml-auto">
-<ExportComponent 
-  reportes={reportes}
-  filiales={filiales}
-  programas={programas}
-  fechaInicio={fechaInicio}
-  fechaFin={fechaFin}
-  filialSeleccionada={filialSeleccionada}
-  modoDetallado={true}  // Forzar el modo detallado
-/>
-        </div>
+        {/* La barra de navegación ya no tiene botones */}
+        <div className="ml-auto"></div>
       </div>
 
       {/* Mensaje de error */}
@@ -654,28 +652,6 @@ export default function ControlTransmisiones() {
 
         {/* Contenido principal */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Pestañas de programas - mostrar solo si hay filial seleccionada y no estamos en resumen */}
-          {filialSeleccionada && !mostrarResumen && (
-            <div className="bg-white border-b border-gray-200 overflow-x-auto shadow-sm custom-scrollbar">
-              <div className="flex px-4">
-                {getProgramasDeFilial().map((prog) => (
-                  <button
-                    key={prog.id}
-                    className={`px-6 py-4 whitespace-nowrap border-b-2 transition-all duration-200 ${
-                      programaSeleccionado === Number(prog.id)
-                        ? "text-blue-600 border-blue-600 font-medium"
-                        : "text-gray-600 border-transparent hover:text-blue-600 hover:border-blue-300"
-                    }`}
-                    onClick={() => setProgramaSeleccionado(Number(prog.id))}
-                  >
-                    <div className="text-sm">{prog.nombre}</div>
-                    <div className="text-xs text-gray-500">{prog.horario || prog.horaInicio}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Tabla de días y estados o Resumen General */}
           <div className="h-full overflow-auto custom-scrollbar">
             {/* Mostrar el componente de Resumen General si está seleccionado */}
@@ -683,63 +659,87 @@ export default function ControlTransmisiones() {
               <div className="h-full overflow-auto">
                 <DashboardGeneral />
               </div>
-            ) : filialSeleccionada && programaSeleccionado && modoSeleccion === 'semana' ? (
+            ) : filialSeleccionada && modoSeleccion === 'semana' ? (
               <div className="p-6">
-                {/* Días de la semana */}
-                <div className="grid grid-cols-6 gap-4 mb-4">
-                  {diasSemana.filter(dia => {
-                    const programa = programas.find(p => Number(p.id) === programaSeleccionado);
-                    return programa && programaTransmiteEnDia(programa, dia.nombre);
-                  }).map((dia, idx) => {
-                    // Convertir la fecha de string a objeto Date
-                    const fechaDia = new Date(dia.fecha);
-                    // Formatear la fecha como DD-MM-YYYY
-                    const fechaFormateada = format(fechaDia, "dd-MM-yyyy");
-                    
-                    return (
-                      <div key={idx} className="text-center">
-                        <div className="font-bold text-blue-600 text-base">
-                          {dia.nombre}
-                        </div>
-                        <div className="text-xs text-gray-500">{fechaFormateada}</div>
-                      </div>
-                    );
-                  })}
+                {/* Nombre de la filial seleccionada */}
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">
+                    {filiales.find(f => Number(f.id) === filialSeleccionada)?.nombre}
+                  </h2>
                 </div>
                 
-                {/* Estados de transmisión */}
-                <div className="grid grid-cols-6 gap-4">
-                  {diasSemana.map((dia, idx) => {
-                    const programa = programas.find(p => Number(p.id) === programaSeleccionado);
-                    if (!programa) return null;
-                    
-                    const transmiteEnDia = programaTransmiteEnDia(programa, dia.nombre);
-                    
-                    if (!transmiteEnDia) {
-                      return null; // No mostrar nada para los días no programados
-                    }
-                    
-                    const reporte = getReporte(
-                      filialSeleccionada!, 
-                      programaSeleccionado,
-                      dia.fecha
-                    );
-                    
-                    return (
-                      <div key={idx} className="flex justify-center items-center">
-                        <TransmisionTooltip 
-                          estado={reporte?.estado || null}
-                          reporte={reporte}
-                          onClick={() => abrirFormulario(
-                            filialSeleccionada!,
-                            programaSeleccionado,
-                            dia.nombre,
-                            dia.fecha
-                          )}
-                        />
-                      </div>
-                    );
-                  })}
+                {/* Tabla de transmisiones */}
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Filial / Programa
+                        </th>
+                        {diasSemana.map((dia, idx) => {
+                          // Convertir la fecha de string a objeto Date
+                          const fechaDia = new Date(dia.fecha);
+                          // Formatear la fecha como DD/MM
+                          const fechaCorta = format(fechaDia, "dd/MM");
+                          
+                          return (
+                            <th key={idx} scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <div>{dia.nombre.substring(0, 3)}</div>
+                              <div>{fechaCorta}</div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {getProgramasDeFilial().map((programa) => (
+                        <tr key={programa.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="font-medium text-gray-900">{programa.nombre}</div>
+                            <div className="text-sm text-gray-500">{programa.horario || programa.horaInicio}</div>
+                          </td>
+                          {diasSemana.map((dia, idx) => {
+                            const transmiteEnDia = programaTransmiteEnDia(programa, dia.nombre);
+                            
+                            // Caso especial para programas de sábado
+                            const esProgramaSabado = programa.nombre.includes('(SÁBADO)') || programa.nombre.includes('(SABADO)');
+                            const esDiaSabado = dia.nombre.toUpperCase() === 'SÁBADO' || dia.nombre.toUpperCase() === 'SABADO';
+                            
+                            if (!transmiteEnDia || (esProgramaSabado && !esDiaSabado)) {
+                              return (
+                                <td key={idx} className="px-4 py-4 whitespace-nowrap text-center">
+                                  <div className="inline-block w-10 h-10 border border-gray-200 rounded-md bg-white"></div>
+                                </td>
+                              );
+                            }
+                            
+                            const reporte = getReporte(
+                              filialSeleccionada!, 
+                              Number(programa.id),
+                              dia.fecha
+                            );
+                            
+                            return (
+                              <td key={idx} className="px-4 py-4 whitespace-nowrap text-center">
+                                <div className="inline-flex justify-center">
+                                  <TransmisionTooltip 
+                                    estado={reporte?.estado || null}
+                                    reporte={reporte}
+                                    onClick={() => abrirFormulario(
+                                      filialSeleccionada!,
+                                      Number(programa.id),
+                                      dia.nombre,
+                                      dia.fecha
+                                    )}
+                                  />
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             ) : modoSeleccion === 'dia' && !mostrarResumen ? (

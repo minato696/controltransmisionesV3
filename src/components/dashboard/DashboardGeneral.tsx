@@ -420,12 +420,7 @@ export default function DashboardGeneral() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-white border-t py-4 mt-auto">
-        <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
-          Sistema de Control de Transmisiones &copy; {new Date().getFullYear()}
-        </div>
-      </footer>
+
     </div>
   );
 }

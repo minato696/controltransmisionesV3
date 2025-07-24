@@ -190,7 +190,7 @@ export default function ExportComponent({
                 );
                 
                 if (!reporte || !reporte.estado) {
-                  tableContent += `<td class="pendiente">⏰</td>`;
+                  tableContent += `<td class="pendiente">-</td>`;
                 } else if (reporte.estado === 'si') {
                   tableContent += `<td class="transmitio">✓</td>`;
                 } else if (reporte.estado === 'no') {
@@ -224,7 +224,7 @@ export default function ExportComponent({
               }
               
               // Consolidar el estado de todos los reportes
-              let symbol = '⏰';
+              let symbol = '';
               let additionalClass = '';
               let additionalText = '';
               
@@ -239,13 +239,14 @@ export default function ExportComponent({
               } else if (reportesDia.every((r: Reporte) => r.estado === 'si')) {
                 symbol = '✓';
                 additionalClass = 'transmitio';
+                additionalText = '';
               } else if (reportesDia.some((r: Reporte) => r.estado === 'tarde')) {
                 symbol = '⏰';
                 additionalClass = 'tarde';
                 additionalText = 'Tde';
               }
               
-              return `<td class="${additionalClass}">${symbol}<br>${additionalText}</td>`;
+              return `<td class="${additionalClass}">${symbol}${additionalText ? '<br>' + additionalText : ''}</td>`;
             }).join('')}
           </tr>
         `;
