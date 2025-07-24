@@ -25,13 +25,9 @@ export default function Sidebar({ filiales = [], onFilialSelect, filialSeleccion
         fixed h-full md:relative
       `}
     >
-      {/* Título principal con mejor tipografía */}
-      <div className="p-5 border-b border-gray-700 flex items-center">
-        <img src="https://statics.exitosanoticias.pe/exitosa/img/global/exitosa.svg" alt="Exitosa" className="h-8 mr-3" />
-        <div className="flex flex-col">
-          <h1 className="text-xl font-bold tracking-wide">Sistema Control</h1>
-          <h2 className="text-lg font-bold tracking-wide">de Transmisiones</h2>
-        </div>
+      {/* Logo centrado y más grande */}
+      <div className="p-5 border-b border-gray-700 flex justify-center items-center">
+        <img src="https://statics.exitosanoticias.pe/exitosa/img/global/exitosa.svg" alt="Exitosa" className="h-12" />
       </div>
       
       {/* Contenedor principal de scroll */}

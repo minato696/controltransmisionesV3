@@ -41,11 +41,8 @@ export default function LoginPage() {
               <img 
                 src="https://statics.exitosanoticias.pe/exitosa/img/global/exitosa.svg" 
                 alt="Radio Exitosa" 
-                className="h-16 mx-auto mb-4"
+                className="h-24 mx-auto mb-4"
               />
-              <h2 className="text-2xl font-bold text-gray-800">
-                Sistema de Control de Transmisiones
-              </h2>
               <p className="text-gray-600 text-sm mt-2">
                 Ingrese sus credenciales para acceder
               </p>

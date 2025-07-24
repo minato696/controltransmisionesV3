@@ -28,7 +28,7 @@ import TransmisionTooltip from './TransmisionTooltip';
 import ReporteForm from './ReporteForm';
 import SelectorSemanasMejorado from './SelectorSemanasMejorado';
 import VistaReportesDiaSemanalStyle from './VistaReportesDiaSemanalStyle';
-import DashboardGeneral from '@/components/dashboard/DashboardGeneral';
+import DashboardGeneral from '@/components/dashboard/ResumenGeneral';
 import ExportComponent from '@/components/exportacion/ExportComponent';
 import Sidebar from '@/components/layout/Sidebar';
 

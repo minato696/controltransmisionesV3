@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ControlTransmisiones from '@/components/transmisiones/ControlTransmisiones';
-import DashboardGeneral from '@/components/dashboard/DashboardGeneral';
+import DashboardGeneral from '@/components/dashboard/ResumenGeneral';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 
