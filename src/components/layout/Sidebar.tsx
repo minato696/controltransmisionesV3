@@ -25,10 +25,13 @@ export default function Sidebar({ filiales = [], onFilialSelect, filialSeleccion
         fixed h-full md:relative
       `}
     >
-      {/* Título principal */}
-      <div className="p-6 border-b border-gray-700 flex items-center">
-        <img src="https://statics.exitosanoticias.pe/exitosa/img/global/exitosa.svg" alt="Exitosa" className="h-6 mr-2" />
-        <h1 className="text-xl font-semibold">Sistema Control de Transmisiones</h1>
+      {/* Título principal con mejor tipografía */}
+      <div className="p-5 border-b border-gray-700 flex items-center">
+        <img src="https://statics.exitosanoticias.pe/exitosa/img/global/exitosa.svg" alt="Exitosa" className="h-8 mr-3" />
+        <div className="flex flex-col">
+          <h1 className="text-xl font-bold tracking-wide">Sistema Control</h1>
+          <h2 className="text-lg font-bold tracking-wide">de Transmisiones</h2>
+        </div>
       </div>
       
       {/* Contenedor principal de scroll */}
@@ -52,39 +55,41 @@ export default function Sidebar({ filiales = [], onFilialSelect, filialSeleccion
           </span>
         </div>
         
-        {filiales.length > 0 && (
-          <>
-            <div className="px-6 py-4 text-lg font-bold text-gray-300 border-b border-gray-700">
-              Filiales
+        <div className="px-6 py-4 text-lg font-bold text-gray-300 border-b border-gray-700">
+          Filiales
+        </div>
+        
+        {/* Lista de filiales con scroll mejorado */}
+        <div className="py-2">
+          {filiales.length === 0 ? (
+            <div className="px-6 py-3 text-sm text-gray-400">
+              No hay filiales disponibles
             </div>
-            
-            {/* Lista de filiales con scroll mejorado */}
-            <div className="py-2">
-              {filiales.map((filial) => (
-                <div
-                  key={filial.id}
-                  className={`flex items-center px-6 py-3 cursor-pointer hover:bg-gray-800 transition-colors border-l-4 ${
-                    filialSeleccionada === Number(filial.id) ? "border-blue-500 bg-gray-800" : "border-transparent"
-                  }`}
-                  onClick={() => {
-                    if (onFilialSelect) {
-                      onFilialSelect(Number(filial.id));
-                    }
-                    
-                    // En móviles, cerrar el sidebar después de seleccionar
-                    if (window.innerWidth < 768) {
-                      setSidebarVisible(false);
-                    }
-                  }}
-                >
-                  <span className={filialSeleccionada === Number(filial.id) ? "text-blue-300 font-medium" : ""}>
-                    {filial.nombre}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+          ) : (
+            filiales.map((filial) => (
+              <div
+                key={filial.id}
+                className={`flex items-center px-6 py-3 cursor-pointer hover:bg-gray-800 transition-colors border-l-4 ${
+                  filialSeleccionada === Number(filial.id) ? "border-blue-500 bg-gray-800" : "border-transparent"
+                }`}
+                onClick={() => {
+                  if (onFilialSelect) {
+                    onFilialSelect(Number(filial.id));
+                  }
+                  
+                  // En móviles, cerrar el sidebar después de seleccionar
+                  if (window.innerWidth < 768) {
+                    setSidebarVisible(false);
+                  }
+                }}
+              >
+                <span className={filialSeleccionada === Number(filial.id) ? "text-blue-300 font-medium" : ""}>
+                  {filial.nombre}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
       
       {/* Opciones de usuario y cerrar sesión */}

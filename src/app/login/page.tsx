@@ -41,19 +41,19 @@ export default function LoginPage() {
               <img 
                 src="https://statics.exitosanoticias.pe/exitosa/img/global/exitosa.svg" 
                 alt="Radio Exitosa" 
-                className="h-12 mx-auto mb-2"
+                className="h-16 mx-auto mb-4"
               />
               <h2 className="text-2xl font-bold text-gray-800">
                 Sistema de Control de Transmisiones
               </h2>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-sm mt-2">
                 Ingrese sus credenciales para acceder
               </p>
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
-                <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+                <div className="bg-red-50 text-red-600 p-4 rounded-md text-sm border border-red-200">
                   {error}
                 </div>
               )}

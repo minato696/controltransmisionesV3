@@ -30,6 +30,7 @@ import SelectorSemanasMejorado from './SelectorSemanasMejorado';
 import VistaReportesDiaSemanalStyle from './VistaReportesDiaSemanalStyle';
 import DashboardGeneral from '@/components/dashboard/DashboardGeneral';
 import ExportComponent from '@/components/exportacion/ExportComponent';
+import Sidebar from '@/components/layout/Sidebar';
 
 export default function ControlTransmisiones() {
   // Estados principales
@@ -481,127 +482,46 @@ export default function ControlTransmisiones() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans overflow-hidden">
-      {/* Barra superior */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 flex items-center shadow-md z-20">
-        {/* Botón de menú para mostrar/ocultar sidebar */}
-        <button 
-          className="p-2 mr-2 rounded-md text-white hover:bg-blue-800"
-          onClick={toggleSidebar}
-          aria-label={sidebarVisible ? "Ocultar menú" : "Mostrar menú"}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        
-        {/* Logo + Título de la sección */}
-        <div className="flex items-center text-lg font-semibold">
-          <img src="https://statics.exitosanoticias.pe/exitosa/img/global/exitosa.svg" alt="Exitosa" className="h-6 mr-2" />
-          <span>
-            Sistema Control de Transmisiones
-            {filialSeleccionada && !mostrarResumen ? (
-              <span> | {filialNombre}</span>
-            ) : mostrarResumen ? (
-              ""
-            ) : (
-              ""
-            )}
-          </span>
-        </div>
-        
-        <div className="ml-auto"></div>
-      </div>
-
-      {/* Mensaje de error */}
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-4 m-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Contenedor principal */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Menú de filiales */}
-        <div 
-          className={`
-            w-64 bg-gray-900 text-white shadow-lg z-30 flex flex-col
-            transition-all duration-300
-            ${sidebarVisible ? 'translate-x-0' : '-translate-x-full'} 
-            fixed h-full md:relative
-          `}
-        >
-          {/* Contenedor principal de scroll */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600">
-            {/* Opción de Resumen General en el menú lateral */}
-            <div
-              className={`flex items-center px-6 py-4 cursor-pointer hover:bg-gray-800 transition-colors border-l-4 ${
-                mostrarResumen ? "border-blue-500" : "border-transparent"
-              }`}
-              onClick={() => setMostrarResumen(true)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <span className={`${mostrarResumen ? "text-blue-300 font-medium" : ""}`}>
-                Resumen General
-              </span>
-            </div>
-            
-            <div className="px-6 py-4 text-lg font-bold text-gray-300 border-b border-gray-700">
-              Filiales
-            </div>
-            
-            {/* Lista de filiales con scroll mejorado */}
-            <div className="py-2">
-              {filiales.length === 0 ? (
-                <div className="px-6 py-8 text-center text-gray-400">
-                  <p className="text-sm">No hay filiales disponibles</p>
-                </div>
-              ) : (
-                filiales.map((filial) => (
-                  <div
-                    key={filial.id}
-                    className={`flex items-center px-6 py-3 cursor-pointer hover:bg-gray-800 transition-colors border-l-4 ${
-                      filialSeleccionada === Number(filial.id) && !mostrarResumen ? "border-blue-500 bg-gray-800" : "border-transparent"
-                    }`}
-                    onClick={() => {
-                      setMostrarResumen(false);
-                      handleFilialClick(Number(filial.id));
-                      
-                      // En móviles, cerrar el sidebar después de seleccionar
-                      if (window.innerWidth < 768) {
-                        setSidebarVisible(false);
-                      }
-                    }}
-                  >
-                    <span className={filialSeleccionada === Number(filial.id) && !mostrarResumen ? "text-blue-300 font-medium" : ""}>
-                      {filial.nombre}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-          
-          {/* Información del sistema - Footer */}
-          <div className="border-t border-gray-700 p-4 text-center text-sm text-gray-400 bg-gray-900 mt-auto">
-            <div className="font-medium text-gray-300">Area Sistemas</div>
-            <div>Radio Exitosa</div>
-            <div className="mt-1">Versión 2.4.0 © 2025</div>
-          </div>
-        </div>
+        {/* Sidebar con el componente mejorado */}
+        <Sidebar
+          filiales={filiales}
+          onFilialSelect={handleFilialClick}
+          filialSeleccionada={filialSeleccionada}
+        />
 
         {/* Contenido principal */}
         <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Botón de menú para mostrar/ocultar sidebar (solo en móvil) */}
+          <div className="block md:hidden p-4">
+            <button 
+              className="p-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+              onClick={toggleSidebar}
+              aria-label={sidebarVisible ? "Ocultar menú" : "Mostrar menú"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Mensaje de error */}
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 m-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Mostrar el componente de Resumen General si está seleccionado */}
           {mostrarResumen ? (
             <div className="h-full overflow-auto">

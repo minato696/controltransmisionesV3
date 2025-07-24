@@ -2,7 +2,6 @@
 
 import { AuthProvider } from "@/context/AuthContext";
 import AuthWrapper from "@/components/auth/AuthWrapper";
-import Navbar from "@/components/layout/Navbar";
 
 export default function RootProvider({
   children,
@@ -12,7 +11,6 @@ export default function RootProvider({
   return (
     <AuthProvider>
       <AuthWrapper>
-        <Navbar />
         {children}
       </AuthWrapper>
     </AuthProvider>
